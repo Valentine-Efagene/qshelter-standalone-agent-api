@@ -12,7 +12,7 @@ import {
   Paginated,
 } from 'nestjs-paginate';
 import { PaginationArgs } from '../common/common.dto';
-import { User } from 'src/user/user.entity';
+import { User } from '../user/user.entity';
 
 // https://www.npmjs.com/package/nestjs-paginate
 @Injectable()

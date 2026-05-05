@@ -14,9 +14,6 @@ import {
 } from 'nestjs-paginate';
 import { PaginationArgs } from '../common/common.dto';
 import { Referral } from '../referral/referral.entity';
-import { PaginatedAgents } from 'src/agent/agent.dto';
-import { PickType } from '@nestjs/swagger';
-import { User } from 'src/user/user.entity';
 
 // https://www.npmjs.com/package/nestjs-paginate
 @Injectable()

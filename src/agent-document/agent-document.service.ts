@@ -13,7 +13,7 @@ import {
 } from './agent-document.dto';
 import { DocumentStatus, ErrorMessage } from '../common/common.enum';
 import { Agent } from '../agent/agent.entity';
-import { Status } from '../common/common.type';
+import { AgentStatus } from '../agent/agent.enums';
 
 @Injectable()
 export class AgentDocumentService {
@@ -29,7 +29,7 @@ export class AgentDocumentService {
   ): Promise<AgentDocument> {
     const { licensingInfoId, ...rest } = createAgentDocumentDto;
     return this.agentDocumentRepository.save({
-      user: { id: licensingInfoId },
+      licensingInfo: { id: licensingInfoId },
       ...rest,
     });
   }
@@ -81,8 +81,13 @@ export class AgentDocumentService {
     const agentId = agentDocument.licensingInfo.agentId;
     // Return agent to pendings if document is reuploaded
     const agent = await this.agentRepository.findOneBy({ id: agentId });
-    if (agent.status !== 'PENDING') {
-      this.agentRepository.merge(agent, { status: Status.PENDING });
+
+    if (!agent) {
+      throw new NotFoundException(`${Agent.name} with ID ${agentId} not found`);
+    }
+
+    if (agent.status !== AgentStatus.DOCUMENTS_UPLOADED) {
+      this.agentRepository.merge(agent, { status: AgentStatus.DOCUMENTS_UPLOADED });
       await this.agentRepository.save(agent);
     }
 

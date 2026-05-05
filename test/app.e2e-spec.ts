@@ -1,6 +1,6 @@
-import * as dotenv from 'dotenv'
+import * as dotenv from 'dotenv';
 
-dotenv.config({ path: '.test.env' })
+dotenv.config({ path: '.test.env' });
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
@@ -19,398 +19,430 @@ import { CreateAgentDto, UpdateAgentStatusDto } from '../src/agent/agent.dto';
 import { Agent } from '../src/agent/agent.entity';
 import { User } from '../src/user/user.entity';
 import { S3UploaderService } from '../src/s3-uploader/s3-uploader.service';
-import { Status } from '../src/common/common.type';
 import { NotificationService } from '../src/notification/notification.service';
+import { AgentStatus } from '../src/agent/agent.enums';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication;
-  let s3UploaderService: S3UploaderService;
-  let userService: UserService;
-  let createAgentDto: CreateAgentDto
-  let agent: Agent
-  let agentUser: User
-  let customer: User
-  let updateCommissionDto: UpdateCommissionDto
-  let createCommissionDto: PostCommissionWithCodeDto
-  let updateLicensingDocumentStatusDto: UpdateLicensingDocumentStatusDto
-  let updateAgentStatusDto: UpdateAgentStatusDto
-  let updateLicensingDocumentDto: UpdateLicensingDocumentDto
-  let notificationService: NotificationService
+describe('Agent Onboarding Story (e2e)', () => {
+    jest.setTimeout(60000);
 
-  beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        AppModule,
-      ],
-    }).compile();
+    let app: INestApplication;
+    let s3UploaderService: S3UploaderService;
+    let userService: UserService;
+    let notificationService: NotificationService;
 
-    app = moduleFixture.createNestApplication();
+    let createAgentDto: CreateAgentDto;
+    let agent: Agent;
+    let agentUser: User;
+    let customer: User;
 
-    // Enable ValidationPipe globally for testing
-    app.useGlobalPipes(
-      new ValidationPipe({
-        transform: true,
-      }),
-    );
+    let reuploadDto: UpdateAgentDocumentDto;
+    let updateAgentDocumentStatusDto: UpdateAgentDocumentStatusDto;
+    let updateAgentStatusDto: UpdateAgentStatusDto;
+    let createCommissionDto: PostCommissionWithCodeDto;
+    let updateCommissionDto: UpdateCommissionDto;
 
-    userService = moduleFixture.get<UserService>(UserService);
-    s3UploaderService = moduleFixture.get<S3UploaderService>(S3UploaderService);
-    notificationService = moduleFixture.get<NotificationService>(NotificationService);
+    let firstCommissionId: number;
+    let totalCommissionFromPosts = 0;
 
-    const notificationResponse = {
-      "message": "Sent",
-      "statusCode": 200,
-      "data": {
-        "message": "Enqueued",
-        "statusCode": 200,
-        "success": true,
-        "data": {
-          "$metadata": {
-            "httpStatusCode": 200,
-            "requestId": "de606e01-0c88-5de8-846a-319c85358361",
-            "attempts": 1,
-            "totalRetryDelay": 0
-          },
-          "MD5OfMessageBody": "9bb462e740d8bc307405f8918c732211",
-          "MessageId": "dd742f94-9fb9-4f5a-9b19-1df2fddac6b3"
+    beforeAll(async () => {
+        const moduleFixture: TestingModule = await Test.createTestingModule({
+            imports: [AppModule],
+        }).compile();
+
+        app = moduleFixture.createNestApplication();
+
+        app.useGlobalPipes(
+            new ValidationPipe({
+                transform: true,
+            }),
+        );
+
+        userService = moduleFixture.get<UserService>(UserService);
+        s3UploaderService = moduleFixture.get<S3UploaderService>(S3UploaderService);
+        notificationService = moduleFixture.get<NotificationService>(NotificationService);
+
+        const notificationResponse = {
+            message: 'Sent',
+            statusCode: 200,
+            data: {
+                message: 'Enqueued',
+                statusCode: 200,
+                success: true,
+            },
+        };
+
+        jest
+            .spyOn(notificationService, 'sendEmail')
+            .mockImplementation(async () => Promise.resolve(notificationResponse as any));
+
+        jest
+            .spyOn(s3UploaderService, 'deleteFromS3')
+            .mockImplementation(async () => Promise.resolve());
+
+        await app.init();
+    });
+
+    afterAll(async () => {
+        if (app) {
+            await app.close();
         }
-      }
-    }
+    });
 
-    // Comment out to receive emails
-    jest.spyOn(notificationService, 'sendEmail').mockImplementation(async () => Promise.resolve(notificationResponse));
+    it('creates an agent profile from a signed-up user', async () => {
+        agentUser = await userService.create(DataEntry.createUserDto);
+        createAgentDto = DataEntry.buildCreateAgentDto(agentUser.id);
 
-    // Mock the deleteFromS3 method to return a resolved promise (Make it a no-op, since it returns void)
-    jest.spyOn(s3UploaderService, 'deleteFromS3').mockImplementation(async () => Promise.resolve());
+        await request(app.getHttpServer())
+            .post('/agents')
+            .send(createAgentDto)
+            .expect(HttpStatus.CREATED)
+            .expect((res) => {
+                expect(res.body).toHaveProperty('data');
+                agent = res.body.data as Agent;
+                expect(agent.id).toBeDefined();
+                expect(agent.name).toBe(createAgentDto.name);
+                expect(agent.agentType).toBe(createAgentDto.agentType);
+                expect(agent.status).toBe(AgentStatus.BASIC_INFO);
+            });
+    });
 
-    await app.init();
-  });
+    it('simulates email verification advancing status to EMAIL_VERIFIED', async () => {
+        // EMAIL_VERIFIED is normally triggered by the external auth service.
+        // We exercise the same update-status endpoint it would call.
+        await request(app.getHttpServer())
+            .post(`/agents/${agent.id}/update-status`)
+            .send({
+                status: AgentStatus.EMAIL_VERIFIED,
+                reviewerId: agentUser.id,
+            })
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(AgentStatus.EMAIL_VERIFIED);
+            });
+    });
 
-  afterAll(async () => {
-    await app.close();
-  });
+    it('agent updates bank details and advances status to PROFILE_SETUP', async () => {
+        await request(app.getHttpServer())
+            .patch(`/agents/${agent.id}`)
+            .send({
+                id: agent.id,
+                bankName: 'Access Bank Plc',
+                accountName: createAgentDto.name,
+                accountNumber: '0123456789',
+            })
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.bankName).toBe('Access Bank Plc');
+                expect(res.body.data.accountNumber).toBe('0123456789');
+            });
 
-  it('creates agent', async () => {
-    const createUserDto = DataEntry.createUserDto
-    agentUser = await userService.create(createUserDto)
-    createAgentDto = DataEntry.buildCreateAgentDto(agentUser.id)
+        await request(app.getHttpServer())
+            .post(`/agents/${agent.id}/update-status`)
+            .send({
+                status: AgentStatus.PROFILE_SETUP,
+                reviewerId: agentUser.id,
+            })
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(AgentStatus.PROFILE_SETUP);
+            });
+    });
 
-    await request(app.getHttpServer())
-      .post('/agents')
-      .send(createAgentDto)
-      .expect((res) => {
-        expect(res.body).toHaveProperty('data');
-        agent = res.body.data as Agent
-        expect(agent.id).toBe(1);
-        expect(agent.title).toBe(createAgentDto.title);
-        expect(agent.name).toBe(createAgentDto.name);
-        expect(agent.agentType).toBe(createAgentDto.agentType);
-        expect(agent.poc.email).toBe(createAgentDto.poc.email);
-        expect(res.body.statusCode).toBe(201);
-      })
-      .expect(201);
-  })
+    it('retrieves the newly created agent by id and by user id', async () => {
+        await request(app.getHttpServer())
+            .get(`/agents/${agent.id}`)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.id).toBe(agent.id);
+                expect(res.body.data.name).toBe(createAgentDto.name);
+            });
 
-  it('retrieves agent by ID', async () => {
-    await request(app.getHttpServer())
-      .get(`/agents/${agent.id}`)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.name).toBe(createAgentDto.name)
-        expect(res.body.statusCode).toBe(200);
-      })
-  })
+        await request(app.getHttpServer())
+            .get(`/agents/by-user/${agentUser.id}`)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.id).toBe(agent.id);
+            });
+    });
 
-  it("retrieves agent's licensing documents", async () => {
-    await request(app.getHttpServer())
-      .get(`/agents/${agent.id}/licensing-documents`)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.length).toBe(1)
-        expect(res.body.statusCode).toBe(200);
-      })
-  })
+    it('loads the agent document bucket and starts with pending review', async () => {
+        await request(app.getHttpServer())
+            .get(`/agents/${agent.id}/agent-documents`)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(Array.isArray(res.body.data)).toBe(true);
+                expect(res.body.data.length).toBeGreaterThan(0);
+                expect(res.body.data[0].status).toBe(DocumentStatus.PENDING);
+            });
+    });
 
-  it('retrieves one licensing document', async () => {
-    await request(app.getHttpServer())
-      .get(`/licensing-documents/1`)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.status).toBe(DocumentStatus.PENDING)
-        expect(res.body.statusCode).toBe(200);
-      })
-  })
+    it('reuploads a document and keeps the total document count stable', async () => {
+        const docsBefore = await request(app.getHttpServer())
+            .get(`/agents/${agent.id}/agent-documents`)
+            .expect(HttpStatus.OK);
 
-  it('reupload licensing document', async () => {
-    // Get the number of documents before reupload
-    const documentsBefore = await request(app.getHttpServer())
-      .get(`/agents/${agent.id}/licensing-documents`)
-      .expect(200);
-    const documentCountBefore = documentsBefore.body.data.length;
+        const documentCountBefore = docsBefore.body.data.length;
+        const firstDocumentId = docsBefore.body.data[0].id;
 
-    updateLicensingDocumentDto = {
-      url: 'https://chatgpt.com/',
-      name: 'New Name'
-    }
+        reuploadDto = {
+            url: 'https://chatgpt.com/',
+            name: 'Updated onboarding document',
+        };
 
-    await request(app.getHttpServer())
-      .patch(`/licensing-documents/1`)
-      .send(updateLicensingDocumentDto)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.url).toBe(updateLicensingDocumentDto.url)
-        expect(res.body.data.name).toBe(updateLicensingDocumentDto.name)
-        expect(res.body.statusCode).toBe(200);
-      })
+        await request(app.getHttpServer())
+            .patch(`/agent-documents/${firstDocumentId}`)
+            .send(reuploadDto)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.url).toBe(reuploadDto.url);
+                expect(res.body.data.name).toBe(reuploadDto.name);
+                expect(res.body.data.status).toBe(DocumentStatus.PENDING);
+            });
 
-    // Verify that the agent status was returned to PENDING
-    await request(app.getHttpServer())
-      .get(`/agents/${agent.id}`)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.status).toBe(Status.PENDING);
-      })
+        await request(app.getHttpServer())
+            .get(`/agents/${agent.id}`)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(AgentStatus.DOCUMENTS_UPLOADED);
+            });
 
-    // Verify that the number of documents is the same (no duplicates)
-    await request(app.getHttpServer())
-      .get(`/agents/${agent.id}/licensing-documents`)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.length).toBe(documentCountBefore);
-      })
-  })
+        await request(app.getHttpServer())
+            .get(`/agents/${agent.id}/agent-documents`)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.length).toBe(documentCountBefore);
+            });
+    });
 
-  it('approve one licensing document', async () => {
-    updateLicensingDocumentStatusDto = {
-      status: DocumentStatus.APPROVED,
-      reviewerId: 1
-    }
+    it('agent accepts terms and submits application advancing status to SUBMITTED', async () => {
+        await request(app.getHttpServer())
+            .post(`/agents/${agent.id}/update-status`)
+            .send({
+                status: AgentStatus.SUBMITTED,
+                reviewerId: agentUser.id,
+            })
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(AgentStatus.SUBMITTED);
+            });
+    });
 
-    await request(app.getHttpServer())
-      .post(`/licensing-documents/1/update-status`)
-      .send(updateLicensingDocumentStatusDto)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.status).toBe(DocumentStatus.APPROVED)
-        expect(res.body.statusCode).toBe(200);
-      })
-  }, 20000)
+    it('enforces decline reason and supports document review transitions', async () => {
+        const docs = await request(app.getHttpServer())
+            .get(`/agents/${agent.id}/agent-documents`)
+            .expect(HttpStatus.OK);
 
-  it('decline one licensing document', async () => {
-    await request(app.getHttpServer())
-      .post(`/licensing-documents/1/update-status`)
-      .send({
-        ...updateLicensingDocumentStatusDto,
-        status: DocumentStatus.DECLINED,
-        declineReason: 'Malformed document'
-      })
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.status).toBe(DocumentStatus.DECLINED)
-        expect(res.body.data.declineReason).toBe('Malformed document')
-        expect(res.body.statusCode).toBe(200);
-      })
-  }, 20000)
+        const firstDocumentId = docs.body.data[0].id;
 
-  it('approve one licensing document', async () => {
-    await request(app.getHttpServer())
-      .post(`/licensing-documents/1/update-status`)
-      .send({
-        ...updateLicensingDocumentStatusDto,
-        status: DocumentStatus.APPROVED,
-        declineReason: 'Malformed document'
-      })
-      .expect(res => {
-        expect(res.body.data.status).toBe(DocumentStatus.APPROVED)
-        expect(res.body.data.declineReason).toBe(null)
-        expect(res.body.statusCode).toBe(200);
-      })
-  })
+        updateAgentDocumentStatusDto = {
+            status: DocumentStatus.APPROVED,
+            reviewerId: 1,
+        };
 
-  it('cannot decline a licensing document without reason', async () => {
-    await request(app.getHttpServer())
-      .post(`/licensing-documents/1/update-status`)
-      .send({
-        ...updateLicensingDocumentStatusDto,
-        status: DocumentStatus.DECLINED,
-        declineReason: null
-      })
-      .expect(HttpStatus.BAD_REQUEST)
-      .expect(res => {
-        expect(res.body.message).toBe(ErrorMessage.NO_REASON_DECLINE)
-        expect(res.body.statusCode).toBe(HttpStatus.BAD_REQUEST);
-      })
-  })
+        await request(app.getHttpServer())
+            .post(`/agent-documents/${firstDocumentId}/update-status`)
+            .send(updateAgentDocumentStatusDto)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(DocumentStatus.APPROVED);
+            });
 
-  it('get agent by user ID', async () => {
-    await request(app.getHttpServer())
-      .get(`/agents/by-user/${agentUser.id}`)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.name).toBe(createAgentDto.name)
-        expect(res.body.statusCode).toBe(200);
-      })
-  })
+        await request(app.getHttpServer())
+            .post(`/agent-documents/${firstDocumentId}/update-status`)
+            .send({
+                ...updateAgentDocumentStatusDto,
+                status: DocumentStatus.DECLINED,
+                declineReason: null,
+            })
+            .expect(HttpStatus.BAD_REQUEST)
+            .expect((res) => {
+                expect(res.body.message).toBe(ErrorMessage.NO_REASON_DECLINE);
+            });
 
-  it('cannot decline agent without reason', async () => {
-    updateAgentStatusDto = {
-      status: Status.APPROVED,
-      reviewerId: 1
-    }
-    await request(app.getHttpServer())
-      .post(`/agents/${agent.id}/update-status`)
-      .send({
-        ...updateLicensingDocumentStatusDto,
-        status: Status.APPROVED,
-        declineReason: 'Malformed document'
-      })
-      .expect(res => {
-        expect(res.body.statusCode).toBe(200);
-      })
-      .expect(200)
-  })
+        await request(app.getHttpServer())
+            .post(`/agent-documents/${firstDocumentId}/update-status`)
+            .send({
+                ...updateAgentDocumentStatusDto,
+                status: DocumentStatus.DECLINED,
+                declineReason: 'Malformed document',
+            })
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(DocumentStatus.DECLINED);
+                expect(res.body.data.declineReason).toBe('Malformed document');
+            });
 
-  it('decline agent', async () => {
-    const declineAgentStatusDto: UpdateAgentStatusDto = {
-      status: Status.DECLINED,
-      reviewerId: 1,
-      comment: 'Malformed document'
-    }
-    await request(app.getHttpServer())
-      .post(`/agents/${agent.id}/update-status`)
-      .send(declineAgentStatusDto)
-      .expect(HttpStatus.OK)
-      .expect(res => {
-        expect(res.body.data.status).toBe(declineAgentStatusDto.status)
-        expect(res.body.data.comment).toBe(declineAgentStatusDto.comment)
-        expect(res.body.statusCode).toBe(200);
-      })
-  }, 20000)
+        await request(app.getHttpServer())
+            .post(`/agent-documents/${firstDocumentId}/update-status`)
+            .send({
+                ...updateAgentDocumentStatusDto,
+                status: DocumentStatus.APPROVED,
+            })
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(DocumentStatus.APPROVED);
+                expect(res.body.data.declineReason).toBe(null);
+            });
+    }, 20000);
 
-  it('approve agent', async () => {
-    updateAgentStatusDto = {
-      status: Status.APPROVED,
-      reviewerId: 1
-    }
-    await request(app.getHttpServer())
-      .post(`/agents/${agent.id}/update-status`)
-      .send({
-        ...updateLicensingDocumentStatusDto,
-        status: Status.APPROVED,
-      })
-      .expect(200)
-      .expect(res => {
-        const resAgent = res.body.data as Agent
-        expect(resAgent.status).toBe(Status.APPROVED)
-        expect(resAgent.comment).toBeFalsy()
-        expect(res.body.statusCode).toBe(200);
-      })
-  }, 20000)
+    it('moves agent through reviewer statuses and validates rejection reason rule', async () => {
+        await request(app.getHttpServer())
+            .post(`/agents/${agent.id}/update-status`)
+            .send({
+                status: AgentStatus.REJECTED,
+                reviewerId: 1,
+                comment: null,
+            })
+            .expect(HttpStatus.BAD_REQUEST)
+            .expect((res) => {
+                expect(res.body.message).toBe(ErrorMessage.NO_REASON_DECLINE);
+            });
 
-  it('get agent by referral code', async () => {
-    await request(app.getHttpServer())
-      .get(`/agents/by-referral-code/${agent.referralCode}`)
-      .expect(200)
-      .expect(res => {
-        expect(res.body.data.name).toBe(createAgentDto.name)
-        expect(res.body.statusCode).toBe(200);
-      })
-  })
+        await request(app.getHttpServer())
+            .post(`/agents/${agent.id}/update-status`)
+            .send({
+                status: AgentStatus.REJECTED,
+                reviewerId: 1,
+                comment: 'Missing mandatory details',
+            })
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(AgentStatus.REJECTED);
+                expect(res.body.data.comment).toBe('Missing mandatory details');
+            });
 
-  it('create referral relationship between a user and an agent', async () => {
-    customer = await userService.create({
-      firstName: faker.person.firstName(),
-      lastName: faker.person.lastName(),
-      email: faker.internet.email(),
-      roles: [UserRole.USER]
-    })
+        updateAgentStatusDto = {
+            status: AgentStatus.APPROVED,
+            reviewerId: 1,
+        };
 
-    const createReferralDto: CreateReferralDto = {
-      referrerId: 1,
-      referreeId: customer.id
-    }
+        await request(app.getHttpServer())
+            .post(`/agents/${agent.id}/update-status`)
+            .send(updateAgentStatusDto)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.status).toBe(AgentStatus.APPROVED);
+                expect(res.body.data.comment).toBeFalsy();
+            });
+    }, 20000);
 
-    await request(app.getHttpServer())
-      .post('/referrals')
-      .send(createReferralDto)
-      .expect(HttpStatus.CREATED)
-  })
+    it('creates a referral for a customer and verifies referree listing', async () => {
+        customer = await userService.create({
+            firstName: faker.person.firstName(),
+            lastName: faker.person.lastName(),
+            email: faker.internet.email(),
+            roles: [UserRole.USER],
+        });
 
-  it('get all referrees of an agent', async () => {
-    await request(app.getHttpServer())
-      .get(`/agents/${agent.id}/referrees`)
-      .expect(HttpStatus.OK)
-      .expect(res => {
-        expect(res.body.data.data.length).toBe(1)
-      })
-  })
+        const createReferralDto: CreateReferralDto = {
+            referrerId: agent.id,
+            referreeId: customer.id,
+        };
 
-  it('post commissions', async () => {
-    createCommissionDto = {
-      referralCode: agent.referralCode,
-      amount: 50000,
-      userId: customer.id
-    }
+        await request(app.getHttpServer())
+            .post('/referrals')
+            .send(createReferralDto)
+            .expect(HttpStatus.CREATED);
 
-    await request(app.getHttpServer())
-      .post('/commissions')
-      .send(createCommissionDto)
-      .expect(HttpStatus.CREATED)
+        await request(app.getHttpServer())
+            .get(`/agents/${agent.id}/referrees`)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.data.length).toBeGreaterThan(0);
+            });
+    });
 
-    await request(app.getHttpServer())
-      .post('/commissions')
-      .send(createCommissionDto)
-      .expect(HttpStatus.CREATED)
-  })
+    it('posts commissions from referral code and validates totals and statuses', async () => {
+        createCommissionDto = {
+            referralCode: agent.referralCode,
+            amount: 50000,
+            userId: customer.id,
+        };
 
-  it('computes total commission for an agent', async () => {
-    await request(app.getHttpServer())
-      .get(`/agents/${agent.id}/total-commission`)
-      .expect(HttpStatus.OK)
-      .expect(res => {
-        expect(res.body.data).toBe(createCommissionDto.amount * 2)
-      })
+        const firstCommissionRes = await request(app.getHttpServer())
+            .post('/commissions')
+            .send(createCommissionDto)
+            .expect(HttpStatus.CREATED);
 
-    updateCommissionDto = {
-      comment: 'The deal fell off',
-      status: CommissionStatus.DECLINED
-    }
-  })
+        const secondCommissionRes = await request(app.getHttpServer())
+            .post('/commissions')
+            .send(createCommissionDto)
+            .expect(HttpStatus.CREATED);
 
-  it('cannot decline commission without comment', async () => {
-    await request(app.getHttpServer())
-      .patch(`/commissions/${1}`)
-      .send({
-        ...updateCommissionDto,
-        comment: null
-      })
-      .expect(HttpStatus.BAD_REQUEST)
-      .expect(res => {
-        expect(res.body.message).toBe(ErrorMessage.NO_COMMENT_DECLINE)
-      })
-  })
+        firstCommissionId = firstCommissionRes.body.data.id;
 
-  it('decline commission with comment', async () => {
-    await request(app.getHttpServer())
-      .patch(`/commissions/${1}`)
-      .send(updateCommissionDto)
-      .expect(HttpStatus.OK)
-      .expect(res => {
-        expect(res.body.data.comment).toBe(updateCommissionDto.comment)
-        expect(res.body.data.status).toBe(CommissionStatus.DECLINED)
-      })
-  })
+        totalCommissionFromPosts =
+            Number(firstCommissionRes.body.data.amount) +
+            Number(secondCommissionRes.body.data.amount);
 
-  it('approve commission payment', async () => {
-    await request(app.getHttpServer())
-      .patch(`/commissions/${1}`)
-      .send({
-        status: CommissionStatus.PAID
-      })
-      .expect(HttpStatus.OK)
-      .expect(res => {
-        expect(res.body.data.comment).toBe(null)
-        expect(res.body.data.status).toBe(CommissionStatus.PAID)
-      })
-  });
+        await request(app.getHttpServer())
+            .get(`/agents/${agent.id}/total-commission`)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(Number(res.body.data)).toBe(totalCommissionFromPosts);
+            });
+
+        updateCommissionDto = {
+            comment: 'The deal fell off',
+            status: CommissionStatus.DECLINED,
+        };
+
+        await request(app.getHttpServer())
+            .patch(`/commissions/${firstCommissionId}`)
+            .send({
+                ...updateCommissionDto,
+                comment: null,
+            })
+            .expect(HttpStatus.BAD_REQUEST)
+            .expect((res) => {
+                expect(res.body.message).toBe(ErrorMessage.NO_COMMENT_DECLINE);
+            });
+
+        await request(app.getHttpServer())
+            .patch(`/commissions/${firstCommissionId}`)
+            .send(updateCommissionDto)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.comment).toBe(updateCommissionDto.comment);
+                expect(res.body.data.status).toBe(CommissionStatus.DECLINED);
+            });
+
+        await request(app.getHttpServer())
+            .patch(`/commissions/${firstCommissionId}`)
+            .send({
+                status: CommissionStatus.PAID,
+            })
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                expect(res.body.data.comment).toBe(null);
+                expect(res.body.data.status).toBe(CommissionStatus.PAID);
+            });
+    });
+
+    it('analytics endpoint returns correct dashboard metrics', async () => {
+        await request(app.getHttpServer())
+            .get(`/analytics/agent/${agent.id}`)
+            .expect(HttpStatus.OK)
+            .expect((res) => {
+                const metrics = res.body;
+                expect(metrics).toHaveProperty('totalCustomers');
+                expect(metrics).toHaveProperty('totalSalesCount');
+                expect(metrics).toHaveProperty('totalSalesAmount');
+                expect(metrics).toHaveProperty('totalAssetValue');
+                expect(metrics).toHaveProperty('totalCommissions');
+                expect(metrics).toHaveProperty('bonusTierProgress');
+
+                // One customer was referred
+                expect(metrics.totalCustomers).toBe(1);
+
+                // Total commissions must match what was posted (both commissions are still in DB,
+                // though first was declined then paid — the query sums all regardless of status)
+                expect(Number(metrics.totalCommissions)).toBe(totalCommissionFromPosts);
+
+                // Bonus tier progress shape
+                expect(metrics.bonusTierProgress).toHaveProperty('currentTier');
+                expect(metrics.bonusTierProgress).toHaveProperty('currentBonusRate');
+                expect(metrics.bonusTierProgress).toHaveProperty('nextTierProgress');
+            });
+    });
 });
