@@ -1,13 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AgentType } from './agent.enums';
+import { AgentStatus, AgentType } from './agent.enums';
 import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { Agent } from './agent.entity';
 import { PaginationDto, PaginationMeta } from '../common/common.dto';
-import { Type } from 'class-transformer';
 import { BulkCreateLicensingInfoDocumentSingleDto } from '../licensing-info/licensing-info.dto';
 import IsNotForQShelterLicensed from '../common/validation/IsNotForQShelterLicensed';
 import IsRequiredForElitePartner from '../common/validation/IsRequiredForElitePartner';
-import { Status } from '../common/common.type';
 import { BulkCreateAgentPocDto } from '../agent-poc/agent-poc.dto';
 
 export class CreateAgentDto {
@@ -142,12 +141,12 @@ export class CreateAgentDto {
 export class UpdateAgentStatusDto {
   @ApiProperty({
     nullable: false,
-    enum: Status,
-    example: Status.APPROVED,
+    enum: AgentStatus,
+    example: AgentStatus.APPROVED,
   })
   @IsNotEmpty()
-  @IsEnum(Status)
-  status: Status;
+  @IsEnum(AgentStatus)
+  status: AgentStatus;
 
   @ApiPropertyOptional({
     description: 'Required for declines',

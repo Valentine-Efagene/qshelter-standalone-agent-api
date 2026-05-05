@@ -1,12 +1,11 @@
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
-import { AgentType } from './agent.enums';
+import { AgentStatus, AgentType } from './agent.enums';
 import { LicensingInfo } from '../licensing-info/licensing-info.entity';
 import { Referral } from '../referral/referral.entity';
 import { CreateAgentDto } from './agent.dto';
 import { IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AbstractBaseReviewableEntity } from '../common/common.entity';
-import { Status } from '../common/common.type';
 import { AgentPoc } from '../agent-poc/agent-poc.entity';
 import { User } from '../user/user.entity';
 
@@ -126,10 +125,16 @@ export class Agent extends AbstractBaseReviewableEntity {
 
   @Column({
     type: 'enum',
-    enum: Status,
-    default: Status.PENDING,
+    enum: AgentStatus,
+    default: AgentStatus.BASIC_INFO,
   })
-  status: Status;
+  status: AgentStatus;
+
+  @Column({ default: false })
+  termsAccepted: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  termsAcceptedAt: Date;
 
   @Column({ nullable: true })
   comment: string;

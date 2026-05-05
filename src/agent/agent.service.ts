@@ -21,7 +21,7 @@ import { UserService } from '../user/user.service';
 import { PaginatedUsers } from '../user/user.dto';
 import { AgentCommissionPaginationDto, PaginatedAgentCommissions } from '../commission/commission.dto';
 import { AgentDocumentService } from '../agent-document/agent-document.service';
-import { Status } from '../common/common.type';
+import { AgentStatus, ADMIN_ONLY_STATUSES, TERMINAL_STATUSES } from './agent.enums';
 import { ErrorMessage } from '../common/common.enum';
 import { AgentApprovedRegistrationDto, AgentOnboardingCompletedDto } from '../notification/notification.dto';
 import { App } from '../notification/notification.enums';
@@ -210,13 +210,13 @@ export class AgentService {
     request: Request
   ): Promise<Agent> {
     if (
-      updateDto.status === Status.DECLINED &&
+      updateDto.status === AgentStatus.REJECTED &&
       !updateDto.comment
     ) {
       throw new BadRequestException(ErrorMessage.NO_REASON_DECLINE);
     }
 
-    if (updateDto.status !== Status.DECLINED) {
+    if (updateDto.status !== AgentStatus.REJECTED) {
       updateDto.comment = null
     }
 
@@ -251,9 +251,9 @@ export class AgentService {
     };
 
     try {
-      if (updateDto.status === Status.APPROVED) {
+      if (updateDto.status === AgentStatus.APPROVED) {
         await this.notificationService.sendAgentApplicationApproved(emailDto, request);
-      } else if (updateDto.status === Status.DECLINED) {
+      } else if (updateDto.status === AgentStatus.REJECTED) {
         await this.notificationService.sendAgentApplicationDeclined({
           ...emailDto,
           reason: updateDto.comment
