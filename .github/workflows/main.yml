@@ -1,0 +1,79 @@
+name: Deploy MOFI AGENT SERVICE
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ 20.x ]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Set deployment stage
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "STAGE=main" >> $GITHUB_ENV
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            echo "STAGE=dev" >> $GITHUB_ENV
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          else
+            echo "Deployment is only supported for main and dev branches"
+            echo "Current branch: ${{ github.ref }}"
+            exit 1
+          fi
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Get AWS Secrets
+        run: |
+          aws secretsmanager get-secret-value --secret-id MOFI --query SecretString --output text > /tmp/secrets.json
+          echo "SECRETS=$(cat /tmp/secrets.json)" >> $GITHUB_ENV
+          jq -r 'to_entries | .[] | "\(.key)=\(.value)"' /tmp/secrets.json >> $GITHUB_ENV
+
+          rm /tmp/secrets.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install serverless globally
+        run: npm install -g serverless@3
+
+      - name: Build serverless bundle
+        run: npm run build:serverless
+
+      - name: Deploy
+        run: sls deploy --stage ${STAGE}
+
+      - name: Notify Deployment
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: mofi-logs
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: ${{ env.STAGE }} Deployment
+          SLACK_MESSAGE: |
+            Environment: ${{ env.ENVIRONMENT }}
+            Branch: ${{ github.ref }}
+            Stage: ${{ env.STAGE }}
+            Status: ${{ job.status }}
+            Deployed by: ${{ github.actor }}
+            API Endpoint: https://${{ env.API_ID }}.execute-api.us-east-1.amazonaws.com

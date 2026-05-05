@@ -1,8 +1,16 @@
 service: mofiXqshelter-agent-func
 useDotenv: true
  
-#package:
-#  individually: false
+package:
+  individually: false
+  patterns:
+    - 'dist/serverless.js'
+    - '!node_modules/**'
+    - '!src/**'
+    - '!test/**'
+    - '!scripts/**'
+    - '!*.ts'
+    - '!*.md'
 
 provider:
   name: aws
@@ -94,17 +102,13 @@ functions:
             name: agentAuthorizer
 
 plugins:
-  - serverless-webpack
+  #- serverless-webpack
   #- serverless-offline
   - serverless-domain-manager
 
 custom:
-  webpack:
-    webpackConfig: 'webpack.config.js'
-    includeModules: true
-    packager: 'npm'
-    excludeFiles: src/**/*.test.ts
-    
+  # esbuild bundles all deps into dist/serverless.js — no node_modules needed in zip
+  # Run `node scripts/esbuild.js` before deploying
   logRetentionInDays: 14
   
   httpApiLogFormat: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength","path":"$context.path","error":"$context.error.message","integrationError":"$context.integration.error"}'
