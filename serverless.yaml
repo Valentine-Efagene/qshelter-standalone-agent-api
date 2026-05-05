@@ -1,0 +1,166 @@
+service: mofiXqshelter-agent-func
+useDotenv: true
+ 
+#package:
+#  individually: false
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  memorySize: 1024
+  stage: dev
+  timeout: 30
+  logs:
+    httpApi:
+      format: ${self:custom.httpApiLogFormat}
+  httpApi:
+    authorizers:
+      agentAuthorizer:
+        type: request
+        functionArn: arn:aws:lambda:us-east-1:${env:AWS_ACCOUNT_ID_F}:function:mofi-authorizer-service-${env:STAGE}-middleware
+        identitySource: 
+          - $request.header.Authorization
+          - $request.header.user_id
+        resultTtlInSeconds: 300
+        #identityValidationExpression: '^Bearer [-0-9a-zA-Z\._]*$'
+        enableSimpleResponses: true
+        payloadFormatVersion: '2.0'
+    cors:
+      allowedOrigins: ${self:custom.customValues.${env:STAGE}.allowedOrigins}
+      allowedHeaders: "*"
+      allowedMethods: "*"
+      exposedResponseHeaders: "*"
+      allowCredentials: false
+      
+
+  environment:
+    DB_PORT: 3306
+    DB_USERNAME: ${self:custom.customValues.${env:STAGE}.DB_USERNAME}
+    DB_PASSWORD: ${self:custom.customValues.${env:STAGE}.DB_PASSWORD}
+    DB_NAME: ${self:custom.customValues.${env:STAGE}.DB_NAME}
+    DB_HOST: ${self:custom.customValues.${env:STAGE}.DB_HOST}
+    AWS_S3_BUCKET_NAME: ${env:MOFI_CUSTOM_AWS_BUCKET, ''}
+    AWS_S3_ACCESS_KEY_ID: ${env:MOFI_CUSTOM_AWS_ACCESS_KEY_ID, ''}
+    AWS_S3_SECRET_ACCESS_KEY: ${env:MOFI_CUSTOM_AWS_SECRET_ACCESS_KEY, ''}
+    AWS_S3_REGION: us-east-1
+    AGENT_DASHBOARD_URL: ${self:custom.customValues.${env:STAGE}.AGENT_DASHBOARD_URL}
+    PRESIGNED_URL_TTL: 3600
+    COMMISSION_PERCENTAGE: 2.5
+    NODE_ENV: ${self:custom.customValues.${env:STAGE}.NODE_ENV}
+    SWAGGER_USER: ${env:SWAGGER_USER}
+    SWAGGER_PASSWORD: ${env:SWAGGER_PASSWORD}
+    NOTIFICATION_ARN: ''
+    NOTIFICATION_URL: ${self:custom.customValues.${env:STAGE}.NOTIFICATION_URL}
+    APP: 'mofi'
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+          Resource: "arn:aws:s3:::${env:MOFI_CUSTOM_AWS_BUCKET}/*"
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+          Resource: 
+            - arn:aws:logs:${aws:region}:${env:AWS_ACCOUNT_ID_F}:log-group:/aws/lambda/${self:service}-${env:STAGE}*:*:*
+
+functions:
+  main:
+    handler: dist/serverless.handler
+    events:
+      - httpApi:
+          path: /favicon.ico
+          method: GET
+      - httpApi:
+          path: /manifest.json
+          method: GET
+      - httpApi:
+          path: /docs/{proxy+}
+          method: GET
+      - httpApi:
+          path: /{proxy+}
+          method: OPTIONS
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+          authorizer:
+            name: agentAuthorizer
+
+plugins:
+  - serverless-webpack
+  #- serverless-offline
+  - serverless-domain-manager
+
+custom:
+  webpack:
+    webpackConfig: 'webpack.config.js'
+    includeModules: true
+    packager: 'npm'
+    excludeFiles: src/**/*.test.ts
+    
+  logRetentionInDays: 14
+  
+  httpApiLogFormat: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength","path":"$context.path","error":"$context.error.message","integrationError":"$context.integration.error"}'
+
+  customDomain:
+    domainName: ${self:custom.customValues.${env:STAGE}.domain}
+    basePath: agent
+    stage: $default
+    createRoute53Record: false
+    endpointType: REGIONAL
+    securityPolicy: TLS_1_2
+    apiType: http
+    hostedZoneId: ${env:CUSTOM_DOMAIN_HOSTED_ZONE_ID, ''}
+    certificateArn: ${env:CUSTOM_DOMAIN_CERT_ARN, ''}
+    autoDomain: true
+    preserveExistingPathMappings: true
+    # Map the basePath to the API
+
+    # apiMapping:
+    #   - api: ${env:API_ID,'hhn6lstpd5'}
+    #     basePath: ${self:custom.customValues.${env:STAGE}.basePath}
+    #     stage: $default
+
+  customValues:
+    dev:
+      domain: 'cherry.qshelter.ng'
+      # api_id: ${env:API_ID,'hhn6lstpd5'}
+      DB_USERNAME: ${env:MOFI_DB_USERNAME}
+      DB_PASSWORD: ${env:MOFI_DB_PASSWORD}
+      DB_NAME: ${env:MOFI_DB_DATABASE}
+      DB_HOST: ${env:MOFI_DB_HOST}
+      NODE_ENV: ${env:NODE_ENV, 'development'}
+      AGENT_DASHBOARD_URL: "https://staging-mof.qshelter.ng/login"
+      NOTIFICATION_URL: "https://api.qshelter.ng/testnotify/email"
+     # authorizerArn: arn:aws:lambda:us-east-1:${env:AWS_ACCOUNT_ID_F, '123456789012'}:function:mofi-authorizer-service-dev-middleware
+      allowedOrigins:
+        - http://localhost:3000
+        - https://staging-mof.qshelter.ng
+        - http://localhost:5173
+        - http://dev.localhost:4000
+        - https://office.qshelter.ng
+        - http://localhost:4000
+
+    main:
+      domain: 'mofiapi.qshelter.ng'
+      DB_USERNAME: ${env:PROD_MOFI_DB_USERNAME}
+      DB_PASSWORD: ${env:PROD_MOFI_DB_PASSWORD}
+      DB_NAME: ${env:PROD_MOFI_DB_DATABASE}
+      DB_HOST: ${env:PROD_MOFI_DB_HOST}
+      NODE_ENV: ${env:NODE_ENV, 'production'}
+      AGENT_DASHBOARD_URL: "https://staging-mof.qshelter.ng/login"
+      NOTIFICATION_URL: "https://api.qshelter.ng/testnotify/email"
+      # authorizerArn: arn:aws:lambda:us-east-1:${env:AWS_ACCOUNT_ID_F, '123456789012'}:function:mofi-authorizer-service-main-middleware
+      allowedOrigins: 
+        - https://housing.mreif.com.ng
+        - https://dashboard.mreif.com.ng
+  
+    # - falsy 
+

@@ -1,0 +1,5 @@
+export enum AgentType {
+  INDIVIDUAL = 'INDIVIDUAL',
+  ORGANISATION = 'ORGANISATION',
+}
+

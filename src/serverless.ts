@@ -1,0 +1,179 @@
+import 'dotenv/config';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { configure as serverlessExpress } from '@vendia/serverless-express';
+import { Callback, Handler, Context } from 'aws-lambda';
+import { QueryFailedFilter } from './common/common.error';
+import { AccessLoggerMiddleware } from './common/middleware/AccessLoggerMiddleware';
+// import basicAuth from 'express-basic-auth';
+
+async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+
+  try {
+    logger.log('Starting application bootstrap...');
+
+    // Use cached app if available to optimize DB connections
+    let app = cachedApp;
+
+    if (!app) {
+      logger.log('Creating new NestJS application instance...');
+      app = await NestFactory.create(AppModule, {
+        logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+      });
+
+      const DOCS_PATH = 'docs';
+      // const USER = process.env.swagger_user
+      // const PASSWORD = process.env.swagger_password
+
+      // app.use([`/${DOCS_PATH}`, `/${DOCS_PATH}-json`], basicAuth({
+      //   challenge: true,
+      //   users: {
+      //     [USER]: PASSWORD,
+      //   },
+      // }));
+
+      app.enableCors();
+
+      // Apply access logging middleware
+      app.use(new AccessLoggerMiddleware().use);
+
+      // Register MySQL exception filter globally
+      app.useGlobalFilters(new QueryFailedFilter());
+
+      // Enable validation globally
+      app.useGlobalPipes(
+        new ValidationPipe({
+          whitelist: false,
+          transform: false,
+        }),
+      );
+
+      // Note: /dev prefix is handled by serverless offline, no need for global prefix
+
+      const config = new DocumentBuilder()
+        .setTitle('MOFI Agent API')
+        .setDescription('Agent API for MOFI')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .addServer('/agent')
+        .build();
+
+      const document = SwaggerModule.createDocument(app, config);
+      SwaggerModule.setup(DOCS_PATH, app, document);
+
+      await app.init();
+
+      // Cache the app instance for reuse
+      cachedApp = app;
+      logger.log('NestJS application cached for future requests');
+
+      // Debug: Log all registered routes
+      const expressApp = app.getHttpAdapter().getInstance();
+      const routes = [];
+      expressApp._router.stack.forEach((middleware) => {
+        if (middleware.route) {
+          routes.push(`${Object.keys(middleware.route.methods).join(',').toUpperCase()} ${middleware.route.path}`);
+        }
+      });
+      console.log('Registered routes:', routes);
+    } else {
+      logger.log('Using cached NestJS application instance');
+    }
+
+    logger.log('Application bootstrap completed successfully');
+    return serverlessExpress({ app: app.getHttpAdapter().getInstance() });
+
+  } catch (error) {
+    logger.error('Bootstrap error', {
+      error: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    throw error;
+  }
+}
+
+// Cache the NestJS app and serverless handler to optimize performance
+let cachedApp: any;
+let server: Handler;
+
+export const handler: Handler = async (
+  event: any,
+  context: Context,
+  callback: Callback,
+) => {
+  const logger = new Logger('LambdaHandler');
+
+  try {
+    // Log incoming event for debugging
+    logger.log('Lambda invoked', {
+      httpMethod: event?.httpMethod || event?.requestContext?.http?.method,
+      path: event?.path || event?.rawPath,
+      requestId: context.awsRequestId,
+      stage: event?.requestContext?.stage || 'unknown'
+    });
+
+    // Initialize server if not already done
+    if (!server) {
+      logger.log('Initializing server...');
+      server = await bootstrap();
+      logger.log('Server initialized successfully');
+    }
+
+    // Call the serverless express handler
+    const result = await server(event, context, callback);
+
+    logger.log('Request processed successfully', {
+      statusCode: result?.statusCode,
+      requestId: context.awsRequestId
+    });
+
+    return result;
+  } catch (error) {
+    logger.error('Lambda handler error', {
+      error: error.message,
+      stack: error.stack,
+      requestId: context.awsRequestId,
+      event: JSON.stringify(event, null, 2)
+    });
+
+    // Return a proper error response
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+      },
+      body: JSON.stringify({
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong',
+        requestId: context.awsRequestId
+      })
+    };
+  }
+};
+
+// Graceful shutdown handler for cleanup
+export const cleanup = async () => {
+  const logger = new Logger('Cleanup');
+
+  if (cachedApp) {
+    try {
+      logger.log('Closing cached application and database connections...');
+      await cachedApp.close();
+      cachedApp = null;
+      server = null;
+      logger.log('Application cleanup completed successfully');
+    } catch (error) {
+      logger.error('Error during application cleanup', {
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  }
+};
