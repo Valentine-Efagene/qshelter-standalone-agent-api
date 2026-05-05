@@ -16,6 +16,9 @@ import {
   Paginated,
 } from 'nestjs-paginate';
 import { AgentDocument } from '../agent-document/agent-document.entity';
+import { DocumentStatus } from '../common/common.enum';
+import { Agent } from '../agent/agent.entity';
+import { AgentStatus } from '../agent/agent.enums';
 
 // https://www.npmjs.com/package/nestjs-paginate
 @Injectable()
@@ -72,15 +75,11 @@ export class LicensingInfoService {
   }
 
   async findOne(id: number): Promise<LicensingInfo> {
-    const licensingInfo = this.licensingInfoRepository.findOne({
+    const licensingInfo = await this.licensingInfoRepository.findOne({
       where: { id },
       relations: [
-        'proposedDevelopments',
-        'user',
-        'licensingInfoPoc',
-        'licensingInfoDocuments',
-        //'licensingInfoDirectors',
-        //'groupEntities',
+        'agent',
+        'agentDocuments',
       ],
     });
 
@@ -111,13 +110,51 @@ export class LicensingInfoService {
       url?: string;
     },
   ): Promise<LicensingInfo> {
-    const licensingInfo = await this.licensingInfoRepository.findOneBy({ id });
+    const licensingInfo = await this.licensingInfoRepository.findOne({
+      where: { id },
+      relations: ['agentDocuments'],
+    });
 
     if (!licensingInfo) {
       throw new NotFoundException(`LicensingInfo with ID ${id} not found`);
     }
 
+    if (!updateLicensingInfoDto.url && !updateLicensingInfoDto.regulatoryBody) {
+      throw new BadRequestException('Provide at least one field to update: url or regulatoryBody');
+    }
+
     this.licensingInfoRepository.merge(licensingInfo, updateLicensingInfoDto);
+
+    const primaryDocument = licensingInfo.agentDocuments?.[0];
+    if (primaryDocument) {
+      if (updateLicensingInfoDto.url) {
+        primaryDocument.url = updateLicensingInfoDto.url;
+      }
+
+      if (updateLicensingInfoDto.regulatoryBody) {
+        primaryDocument.name = updateLicensingInfoDto.regulatoryBody;
+      }
+
+      primaryDocument.status = DocumentStatus.PENDING;
+      primaryDocument.declineReason = null;
+      primaryDocument.reviewedAt = null;
+      primaryDocument.reviewer = null;
+      await this.dataSource.getRepository(AgentDocument).save(primaryDocument);
+    } else if (updateLicensingInfoDto.url) {
+      const document = new AgentDocument();
+      document.name = updateLicensingInfoDto.regulatoryBody || licensingInfo.regulatoryBody;
+      document.url = updateLicensingInfoDto.url;
+      document.licensingInfoId = licensingInfo.id;
+      document.status = DocumentStatus.PENDING;
+      await this.dataSource.getRepository(AgentDocument).save(document);
+    }
+
+    const agent = await this.dataSource.getRepository(Agent).findOneBy({ id: licensingInfo.agentId });
+    if (agent && agent.status !== AgentStatus.DOCUMENTS_UPLOADED) {
+      agent.status = AgentStatus.DOCUMENTS_UPLOADED;
+      await this.dataSource.getRepository(Agent).save(agent);
+    }
+
     return this.licensingInfoRepository.save(licensingInfo);
   }
 

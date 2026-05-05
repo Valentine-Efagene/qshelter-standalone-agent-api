@@ -3,6 +3,7 @@ import { CreateAgentDto } from "../../agent/agent.dto";
 import { CreateUserDto } from "../../user/user.dto";
 import { UserRole } from "../../user/user.enums";
 import { CreateLicensingInfoDto } from "../../licensing-info/licensing-info.dto";
+import { LicensingRegulatoryBody } from "../../licensing-info/licensing-info.enums";
 import { faker } from "@faker-js/faker/.";
 
 export default class DataEntry {
@@ -48,7 +49,7 @@ export default class DataEntry {
     public static buildCreateAgentDto: (id: number) => CreateAgentDto = (id) => {
         const createLicensingInfoDto: CreateLicensingInfoDto = {
             agentId: 1,
-            regulatoryBody: faker.company.name(),
+            regulatoryBody: LicensingRegulatoryBody.CAC_CERTIFICATE,
             url: faker.internet.url(),
         }
 

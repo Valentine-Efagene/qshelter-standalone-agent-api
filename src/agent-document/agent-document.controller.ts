@@ -20,7 +20,8 @@ import {
     ApiTags,
 } from '@nestjs/swagger';
 import {
-    StandardApiResponse,
+    ApiResult,
+    okResponse,
     UpdateDocumentStatusDto,
 } from '../common/common.dto';
 import { ResponseMessage } from '../common/common.enum';
@@ -48,24 +49,24 @@ export class AgentDocumentController {
     })
     async create(
         @Body() createagentDocumentDto: CreateAgentDocumentDto,
-    ): Promise<StandardApiResponse<AgentDocument>> {
+    ): Promise<ApiResult<AgentDocument>> {
         const data = await this.agentDocumentService.create(createagentDocumentDto);
-        return new StandardApiResponse(HttpStatus.CREATED, ResponseMessage.CREATED, data);
+        return okResponse(data, ResponseMessage.CREATED);
     }
 
     @Get()
     @ApiResponse(OpenApiHelper.arrayResponseDoc)
-    async findAll(): Promise<StandardApiResponse<AgentDocument[]>> {
+    async findAll(): Promise<ApiResult<AgentDocument[]>> {
         const data = await this.agentDocumentService.findAll();
-        return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+        return okResponse(data, ResponseMessage.FETCHED);
     }
 
     @Get(':id')
     async findOne(
         @Param('id', ParseIntPipe) id: number,
-    ): Promise<StandardApiResponse<AgentDocument>> {
+    ): Promise<ApiResult<AgentDocument>> {
         const data = await this.agentDocumentService.findOne(id);
-        return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+        return okResponse(data, ResponseMessage.FETCHED);
     }
 
     @HttpCode(HttpStatus.OK)
@@ -76,20 +77,20 @@ export class AgentDocumentController {
     async updateStatus(
         @Param('id', ParseIntPipe) id: number,
         @Body() updateDto: UpdateDocumentStatusDto,
-    ): Promise<StandardApiResponse<AgentDocument>> {
+    ): Promise<ApiResult<AgentDocument>> {
         const data = await this.agentDocumentService.updateStatus(
             id,
             updateDto,
         );
 
-        return new StandardApiResponse(HttpStatus.OK, ResponseMessage.UPDATED, data);
+        return okResponse(data, ResponseMessage.UPDATED);
     }
 
     @Patch(':id')
     async update(
         @Param('id', ParseIntPipe) id: number,
         @Body() updateDto: UpdateAgentDocumentDto,
-    ): Promise<StandardApiResponse<AgentDocument>> {
+    ): Promise<ApiResult<AgentDocument>> {
         if (updateDto.url) {
             const document = await this.agentDocumentService.findOne(id)
 
@@ -101,16 +102,16 @@ export class AgentDocumentController {
         }
 
         const data = await this.agentDocumentService.updateOne(id, updateDto);
-        return new StandardApiResponse(HttpStatus.OK, ResponseMessage.UPDATED, data);
+        return okResponse(data, ResponseMessage.UPDATED);
     }
 
     @Delete(':id')
     async remove(
-        @Param('id', ParseIntPipe) id: number,): Promise<StandardApiResponse<void>> {
+        @Param('id', ParseIntPipe) id: number,): Promise<ApiResult<void>> {
         const document = await this.agentDocumentService.findOne(id)
         await this.s3UploaderService.deleteFromS3(document.url)
         await this.agentDocumentService.remove(id);
 
-        return new StandardApiResponse(HttpStatus.NO_CONTENT, ResponseMessage.DELETED, null);
+        return okResponse(null, ResponseMessage.DELETED);
     }
 }

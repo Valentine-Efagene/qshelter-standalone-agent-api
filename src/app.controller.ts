@@ -1,22 +1,21 @@
-import { Controller, Get, HttpStatus } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { StandardApiResponse } from './common/common.dto';
+import { ApiResult, okResponse } from './common/common.dto';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
   @Get('test')
-  async test(): Promise<StandardApiResponse<any>> {
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      'Test endpoint working',
+  async test(): Promise<ApiResult<any>> {
+    return okResponse(
       {
         message: 'API is working',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'unknown',
-        nodeVersion: process.version
-      }
+        nodeVersion: process.version,
+      },
+      'Test endpoint working',
     );
   }
 }

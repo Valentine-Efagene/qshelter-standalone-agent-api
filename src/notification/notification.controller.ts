@@ -11,7 +11,7 @@ import { AgentApprovedRegistrationDto } from './notification.dto';
 import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { SwaggerAuth } from '@qshelter/nest-auth';
-import { StandardApiResponse } from '../common/common.dto';
+import { ApiResult, okResponse } from '../common/common.dto';
 import { Request } from 'express';
 
 @SwaggerAuth()
@@ -35,6 +35,6 @@ export class PropertyController {
     @Req() request: Request
   ) {
     const response = await this.notificationService.sendAgentApplicationApproved(body, request);
-    return new StandardApiResponse(HttpStatus.OK, 'Sent', response);
+    return okResponse(response, 'Sent');
   }
 }

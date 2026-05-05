@@ -1,6 +1,6 @@
 import { Controller, Get, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { StandardApiResponse } from '../common/common.dto';
+import { ApiResult, okResponse } from '../common/common.dto';
 
 @Controller('health')
 @ApiTags('Health')
@@ -8,7 +8,7 @@ export class HealthController {
   @Get()
   @ApiOperation({ summary: 'Health check endpoint' })
   @ApiResponse({ status: 200, description: 'Service is healthy' })
-  async check(): Promise<StandardApiResponse<any>> {
+  async check(): Promise<ApiResult<any>> {
     const healthData = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -26,11 +26,7 @@ export class HealthController {
       }
     };
 
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      'Health check successful',
-      healthData
-    );
+    return okResponse(healthData, 'Health check successful');
   }
 
   private async checkDatabase(): Promise<{ status: string; message?: string }> {

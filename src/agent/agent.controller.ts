@@ -20,7 +20,7 @@ import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
-import { StandardApiResponse } from '../common/common.dto';
+import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
 import { PaginatedUsers } from '../user/user.dto';
 import { AgentCommissionPaginationDto, PaginatedCommissions } from '../commission/commission.dto';
@@ -40,21 +40,17 @@ export class AgentController {
   async create(
     @Body() createAgentDto: CreateAgentDto,
     @Req() request: Request,
-  ): Promise<StandardApiResponse<Agent>> {
+  ): Promise<ApiResult<Agent>> {
     const data = await this.agentService.create(createAgentDto, request);
-    return new StandardApiResponse(
-      HttpStatus.CREATED,
-      ResponseMessage.CREATED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.CREATED);
   }
 
   // @Get()
   // @ApiHeader(OpenApiHelper.userIdHeader)
   // @ApiResponse(OpenApiHelper.arrayResponseDoc)
-  // async findAll(): Promise<StandardApiResponse<Agent[]>> {
+  // async findAll(): Promise<ApiResult<Agent[]>> {
   //   const data = await this.agentService.findAll();
-  //   return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+  //   return okResponse(data, ResponseMessage.FETCHED);
   // }
 
   @Get('paginate')
@@ -62,13 +58,9 @@ export class AgentController {
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Paginate() query: PaginateQuery,
-  ): Promise<StandardApiResponse<Paginated<Agent>>> {
+  ): Promise<ApiResult<Paginated<Agent>>> {
     const data = await this.agentService.findAllPaginated(query);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Get(':id/referrees')
@@ -77,13 +69,9 @@ export class AgentController {
   async getReferrees(
     @Param('id', AgentIdValidationPipe) id: number,
     @Query() query: ReferreePaginationDto,
-  ): Promise<StandardApiResponse<PaginatedUsers>> {
+  ): Promise<ApiResult<PaginatedUsers>> {
     const data = await this.agentService.getReferrees(query, id);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Get(':id/agent-documents')
@@ -91,13 +79,9 @@ export class AgentController {
   @ApiResponse(OpenApiHelper.responseDoc)
   async findAllAgentDocuments(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<AgentDocument[]>> {
+  ): Promise<ApiResult<AgentDocument[]>> {
     const data = await this.agentService.findAgentDocumentsByAgentId(id);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Get(':id/commissions')
@@ -106,13 +90,9 @@ export class AgentController {
   async getCommissions(
     @Param('id', ParseIntPipe) id: number,
     @Query() query: AgentCommissionPaginationDto,
-  ): Promise<StandardApiResponse<PaginatedCommissions>> {
+  ): Promise<ApiResult<PaginatedCommissions>> {
     const data = await this.agentService.getCommissions(query, id);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Get(':id/total-commission')
@@ -120,13 +100,9 @@ export class AgentController {
   @ApiResponse(OpenApiHelper.responseDoc)
   async getTotalCommission(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<number>> {
+  ): Promise<ApiResult<number>> {
     const data = await this.agentService.getTotalCommission(id);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Get(':id')
@@ -134,13 +110,9 @@ export class AgentController {
   @ApiResponse(OpenApiHelper.responseDoc)
   async findOne(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<Agent>> {
+  ): Promise<ApiResult<Agent>> {
     const data = await this.agentService.findOne(id);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
 
@@ -148,18 +120,18 @@ export class AgentController {
   @Get('by-referral-code/:code')
   async findOneByReferralCode(
     @Param('code') code: string,
-  ): Promise<StandardApiResponse<Agent>> {
+  ): Promise<ApiResult<Agent>> {
     const data = await this.agentService.findOneByReferralCode(code);
-    return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @ApiHeader(OpenApiHelper.userIdHeader)
   @Get('by-user/:id')
   async findOneByUser(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<Agent>> {
+  ): Promise<ApiResult<Agent>> {
     const data = await this.agentService.findOneByUser(id);
-    return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -171,14 +143,14 @@ export class AgentController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateAgentStatusDto,
     @Req() request: Request,
-  ): Promise<StandardApiResponse<Agent>> {
+  ): Promise<ApiResult<Agent>> {
     const data = await this.agentService.updateStatus(
       id,
       updateDto,
       request
     );
 
-    return new StandardApiResponse(HttpStatus.OK, ResponseMessage.UPDATED, data);
+    return okResponse(data, ResponseMessage.UPDATED);
   }
 
   @Patch(':id')
@@ -187,13 +159,9 @@ export class AgentController {
   async updateOne(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateAgentDto,
-  ): Promise<StandardApiResponse<Agent>> {
+  ): Promise<ApiResult<Agent>> {
     const data = await this.agentService.updateOne({ id, ...dto });
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   // @Delete(':id')
@@ -202,8 +170,8 @@ export class AgentController {
   // @ApiOperation({ summary: '', tags: ['Admin'] })
   // @ApiResponse(OpenApiHelper.nullResponseDoc)
   // async remove(
-  //   @Param('id', ParseIntPipe) id: number): Promise<StandardApiResponse<void>> {
+  //   @Param('id', ParseIntPipe) id: number): Promise<ApiResult<void>> {
   //   await this.agentService.remove(id);
-  //   return new StandardApiResponse(HttpStatus.NO_CONTENT, ResponseMessage.DELETED, null);
+  //   return okResponse(null, ResponseMessage.DELETED);
   // }
 }

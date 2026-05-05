@@ -5,9 +5,6 @@ import {
   Get,
   Param,
   Post,
-  UseInterceptors,
-  BadRequestException,
-  UploadedFile,
   HttpStatus,
   ParseIntPipe,
   Patch,
@@ -19,17 +16,15 @@ import {
   UpdateLicensingInfoDto,
 } from './licensing-info.dto';
 import {
-  ApiConsumes,
   ApiHeader,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/helpers/OpenApiHelper';
-import { StandardApiResponse } from '../common/common.dto';
+import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
 
 @SwaggerAuth()
@@ -48,15 +43,11 @@ export class LicensingInfoController {
   })
   async create(
     @Body() dto: CreateLicensingInfoControllerDto,
-  ): Promise<StandardApiResponse<LicensingInfo>> {
+  ): Promise<ApiResult<LicensingInfo>> {
 
     const data = await this.licensingInfoService.create(dto);
 
-    return new StandardApiResponse(
-      HttpStatus.CREATED,
-      ResponseMessage.CREATED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.CREATED);
   }
 
   @Get('paginate')
@@ -64,40 +55,26 @@ export class LicensingInfoController {
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Paginate() query: PaginateQuery,
-  ): Promise<StandardApiResponse<Paginated<LicensingInfo>>> {
+  ): Promise<ApiResult<Paginated<LicensingInfo>>> {
     const data = await this.licensingInfoService.findAllPaginated(query);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Patch(':id')
-  @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
   async updateOne(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateLicensingInfoDto,
-  ): Promise<StandardApiResponse<LicensingInfo>> {
+  ): Promise<ApiResult<LicensingInfo>> {
     const data = await this.licensingInfoService.reupload(id, updateDto);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.UPDATED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.UPDATED);
   }
 
   @Delete(':id')
   async remove(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<void>> {
+  ): Promise<ApiResult<void>> {
     await this.licensingInfoService.remove(id);
 
-    return new StandardApiResponse(
-      HttpStatus.NO_CONTENT,
-      ResponseMessage.DELETED,
-      null,
-    );
+    return okResponse(null, ResponseMessage.DELETED);
   }
 }

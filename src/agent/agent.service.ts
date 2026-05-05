@@ -21,7 +21,12 @@ import { UserService } from '../user/user.service';
 import { PaginatedUsers } from '../user/user.dto';
 import { AgentCommissionPaginationDto, PaginatedAgentCommissions } from '../commission/commission.dto';
 import { AgentDocumentService } from '../agent-document/agent-document.service';
-import { AgentStatus, ADMIN_ONLY_STATUSES, TERMINAL_STATUSES } from './agent.enums';
+import {
+  AgentStatus,
+  ADMIN_ONLY_STATUSES,
+  TERMINAL_STATUSES,
+  AgentType,
+} from './agent.enums';
 import { ErrorMessage } from '../common/common.enum';
 import { AgentApprovedRegistrationDto, AgentOnboardingCompletedDto } from '../notification/notification.dto';
 import { App } from '../notification/notification.enums';
@@ -30,6 +35,7 @@ import { NotificationService } from '../notification/notification.service';
 import EnvironmentHelper from '../common/helpers/EnvironmentHelper';
 import { Request } from 'express';
 import { AgentPoc } from '../agent-poc/agent-poc.entity';
+import { LicensingRegulatoryBody } from '../licensing-info/licensing-info.enums';
 
 // https://www.npmjs.com/package/nestjs-paginate
 @Injectable()
@@ -47,6 +53,44 @@ export class AgentService {
     private dataSource: DataSource,
   ) {
     this.app = TypeHelper.toEnum(App, process.env.APP)
+  }
+
+  private ensureElitePartnerLicensingRequirements(
+    licensingInfoDto: CreateAgentDto['licensingInfo'],
+  ): void {
+    if (!licensingInfoDto?.length) {
+      throw new BadRequestException('Elite Partner onboarding requires CAC certificate upload');
+    }
+
+    const hasCacCertificate = licensingInfoDto.some((doc) => {
+      return doc.regulatoryBody === LicensingRegulatoryBody.CAC_CERTIFICATE;
+    });
+
+    if (!hasCacCertificate) {
+      throw new BadRequestException('CAC certificate is required for Elite Partner onboarding');
+    }
+
+    const hasInvalidDocument = licensingInfoDto.some((doc) => !doc.url);
+    if (hasInvalidDocument) {
+      throw new BadRequestException('Each licensing document must include a url');
+    }
+  }
+
+  private async validateApprovalReadiness(agentId: number, agentType: AgentType): Promise<void> {
+    const licensingInfoRows = await this.dataSource.getRepository(LicensingInfo).find({
+      where: { agentId },
+    });
+
+    if (agentType === AgentType.ELITE_PARTNER) {
+      const hasCacCertificate = licensingInfoRows.some((info) =>
+        info.regulatoryBody === LicensingRegulatoryBody.CAC_CERTIFICATE ||
+        (info.regulatoryBody || '').toUpperCase().includes('CAC'),
+      );
+
+      if (!hasCacCertificate) {
+        throw new BadRequestException('Elite Partner application cannot be approved without CAC certificate');
+      }
+    }
   }
 
   async create(createAgentDto: CreateAgentDto, request: Request): Promise<Agent> {
@@ -67,6 +111,10 @@ export class AgentService {
     }
 
     const referralCode = CryptographyHelper.generateReferralCode(user.email, user, 5);
+
+    if (createAgentDto.agentType === AgentType.ELITE_PARTNER) {
+      this.ensureElitePartnerLicensingRequirements(licensingInfoDto);
+    }
 
     try {
       const agent = new Agent({
@@ -209,6 +257,10 @@ export class AgentService {
     updateDto: UpdateAgentStatusDto,
     request: Request
   ): Promise<Agent> {
+    if (!ADMIN_ONLY_STATUSES.has(updateDto.status)) {
+      throw new BadRequestException('Only APPROVED or REJECTED statuses are allowed on this endpoint');
+    }
+
     if (
       updateDto.status === AgentStatus.REJECTED &&
       !updateDto.comment
@@ -231,6 +283,18 @@ export class AgentService {
       throw new NotFoundException(
         `${Agent.name} with ID ${id} not found`,
       );
+    }
+
+    if (TERMINAL_STATUSES.has(agent.status)) {
+      throw new BadRequestException(`Cannot update status from terminal state ${agent.status}`);
+    }
+
+    if (updateDto.status === AgentStatus.APPROVED && agent.status !== AgentStatus.SUBMITTED) {
+      throw new BadRequestException('Agent can only be approved after reaching SUBMITTED status');
+    }
+
+    if (updateDto.status === AgentStatus.APPROVED) {
+      await this.validateApprovalReadiness(agent.id, agent.agentType);
     }
 
     const { reviewerId, ...rest } = updateDto;

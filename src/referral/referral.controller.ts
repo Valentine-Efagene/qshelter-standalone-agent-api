@@ -14,7 +14,7 @@ import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
-import { StandardApiResponse } from '../common/common.dto';
+import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
 import { User } from '../user/user.entity';
 
@@ -28,13 +28,9 @@ export class ReferralController {
   @Post()
   async create(
     @Body() createReferralDto: CreateReferralDto,
-  ): Promise<StandardApiResponse<Referral>> {
+  ): Promise<ApiResult<Referral>> {
     const data = await this.referralService.create(createReferralDto);
-    return new StandardApiResponse(
-      HttpStatus.CREATED,
-      ResponseMessage.CREATED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.CREATED);
   }
 
   @Get('paginate')
@@ -42,13 +38,9 @@ export class ReferralController {
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Paginate() query: PaginateQuery,
-  ): Promise<StandardApiResponse<Paginated<Referral>>> {
+  ): Promise<ApiResult<Paginated<Referral>>> {
     const data = await this.referralService.findAllPaginated(query);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   // @Get('by-agent/:id/paginate')
@@ -57,7 +49,7 @@ export class ReferralController {
   // async findAllByAgentPaginated(
   //   @Param('id', ParseIntPipe) id: number,
   //   @Paginate() query: PaginateQuery,
-  // ): Promise<StandardApiResponse<Paginated<User>>> {
+  // ): Promise<ApiResult<Paginated<User>>> {
   //   const data = await this.referralService.findAllPaginatedByAgent(query, id);
   //   return new StandardApiResponse(
   //     HttpStatus.OK,
@@ -71,13 +63,9 @@ export class ReferralController {
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllByAgent(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<User[]>> {
+  ): Promise<ApiResult<User[]>> {
     const data = await this.referralService.getAllReferreesByAgent(id);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Get(':id')
@@ -85,13 +73,9 @@ export class ReferralController {
   @ApiResponse(OpenApiHelper.responseDoc)
   async findOne(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<Referral>> {
+  ): Promise<ApiResult<Referral>> {
     const data = await this.referralService.findOne(id);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   // @Delete(':id')
@@ -100,8 +84,8 @@ export class ReferralController {
   // @ApiOperation({ summary: '', tags: ['Admin'] })
   // @ApiResponse(OpenApiHelper.nullResponseDoc)
   // async remove(
-  //   @Param('id', ParseIntPipe) id: number): Promise<StandardApiResponse<void>> {
+  //   @Param('id', ParseIntPipe) id: number): Promise<ApiResult<void>> {
   //   await this.referralService.remove(id);
-  //   return new StandardApiResponse(HttpStatus.NO_CONTENT, ResponseMessage.DELETED, null);
+  //   return okResponse(null, ResponseMessage.DELETED);
   // }
 }

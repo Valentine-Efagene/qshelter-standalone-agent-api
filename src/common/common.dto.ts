@@ -77,17 +77,49 @@ export class DeclineDocumentDto {
   reviewerId: number;
 }
 
-@ApiExtraModels(StandardApiResponse)
-export class StandardApiResponse<T = any> {
-  statusCode: number;
-  message: string;
-  data?: T;
+// ---------------------------------------------------------------------------
+// Standard API response — discriminated union on `ok`
+// ---------------------------------------------------------------------------
 
-  constructor(statusCode: number, message: string, data?: T) {
+/** Returned by every successful endpoint. */
+export interface SuccessResponse<T> {
+  ok: true;
+  body: T;
+  message: string;
+}
+
+/** Returned by every failed endpoint (HTTP errors, validation, DB errors). */
+export interface ErrorResponse {
+  ok: false;
+  body: null;
+  message: string;
+  /** Optional list of field-level validation messages. */
+  errors?: string[];
+}
+
+/** Union type used as controller return type: `ApiResult<MyDto>` */
+export type ApiResult<T> = SuccessResponse<T> | ErrorResponse;
+
+// Keep the name `StandardApiResponse` as a class for Swagger compatibility.
+export class StandardApiResponse<T = any> implements SuccessResponse<T> {
+  ok: true = true;
+  body: T;
+  message: string;
+
+  constructor(message: string, body: T) {
     this.message = message;
-    this.statusCode = statusCode;
-    this.data = data;
+    this.body = body;
   }
+}
+
+/** Factory helper — use in controllers for success paths. */
+export function okResponse<T>(body: T, message: string): SuccessResponse<T> {
+  return { ok: true, body, message };
+}
+
+/** Factory helper — use in exception filters / error paths. */
+export function failResponse(message: string, errors?: string[]): ErrorResponse {
+  return { ok: false, body: null, message, ...(errors ? { errors } : {}) };
 }
 
 export class DocumentReuploadDto {

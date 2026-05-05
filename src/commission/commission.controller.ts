@@ -17,7 +17,7 @@ import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ErrorMessage, ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
-import { StandardApiResponse } from '../common/common.dto';
+import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
 import { CommissionStatus } from './commission.enums';
 
@@ -31,7 +31,7 @@ export class CommissionController {
   // @Post()
   // async create(
   //   @Body() createCommissionDto: CreateCommissionDto,
-  // ): Promise<StandardApiResponse<Commission>> {
+  // ): Promise<ApiResult<Commission>> {
   //   const data = await this.commissionService.create(createCommissionDto);
   //   return new StandardApiResponse(
   //     HttpStatus.CREATED,
@@ -43,21 +43,17 @@ export class CommissionController {
   @Post()
   async create(
     @Body() createCommissionDto: PostCommissionWithCodeDto,
-  ): Promise<StandardApiResponse<Commission>> {
+  ): Promise<ApiResult<Commission>> {
     const data = await this.commissionService.postCommissionWithCode(createCommissionDto);
-    return new StandardApiResponse(
-      HttpStatus.CREATED,
-      ResponseMessage.CREATED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.CREATED);
   }
 
   // @Get()
   // @ApiHeader(OpenApiHelper.userIdHeader)
   // @ApiResponse(OpenApiHelper.arrayResponseDoc)
-  // async findAll(): Promise<StandardApiResponse<Commission[]>> {
+  // async findAll(): Promise<ApiResult<Commission[]>> {
   //   const data = await this.commissionService.findAll();
-  //   return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+  //   return okResponse(data, ResponseMessage.FETCHED);
   // }
 
   @Get('paginate')
@@ -65,13 +61,9 @@ export class CommissionController {
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Paginate() query: PaginateQuery,
-  ): Promise<StandardApiResponse<Paginated<Commission>>> {
+  ): Promise<ApiResult<Paginated<Commission>>> {
     const data = await this.commissionService.findAllPaginated(query);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Get(':id')
@@ -79,13 +71,9 @@ export class CommissionController {
   @ApiResponse(OpenApiHelper.responseDoc)
   async findOne(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<Commission>> {
+  ): Promise<ApiResult<Commission>> {
     const data = await this.commissionService.findOne(id);
-    return new StandardApiResponse(
-      HttpStatus.OK,
-      ResponseMessage.FETCHED,
-      data,
-    );
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Patch(':id')
@@ -94,7 +82,7 @@ export class CommissionController {
   async updateOne(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCommissionDto
-  ): Promise<StandardApiResponse<Commission>> {
+  ): Promise<ApiResult<Commission>> {
     if (dto.status && dto.status === CommissionStatus.DECLINED && (!dto.comment || dto.comment.length < 1)) {
       throw new BadRequestException(ErrorMessage.NO_COMMENT_DECLINE)
     }
@@ -104,7 +92,7 @@ export class CommissionController {
     }
 
     const data = await this.commissionService.updateOne(id, dto);
-    return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Delete(':id')
@@ -113,8 +101,8 @@ export class CommissionController {
   @ApiOperation({ summary: '', tags: ['Admin'] })
   @ApiResponse(OpenApiHelper.nullResponseDoc)
   async remove(
-    @Param('id', ParseIntPipe) id: number): Promise<StandardApiResponse<void>> {
+    @Param('id', ParseIntPipe) id: number): Promise<ApiResult<void>> {
     await this.commissionService.remove(id);
-    return new StandardApiResponse(HttpStatus.NO_CONTENT, ResponseMessage.DELETED, null);
+    return okResponse(null, ResponseMessage.DELETED);
   }
 }

@@ -2,15 +2,17 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 import { DocumentStatus } from '../common/common.enum';
+import { LicensingRegulatoryBody } from './licensing-info.enums';
 
 export class CreateLicensingInfoControllerDto {
   @ApiPropertyOptional({ nullable: true })
   @IsNotEmpty()
   url: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ nullable: true, enum: LicensingRegulatoryBody })
   @IsNotEmpty()
-  regulatoryBody: string;
+  @IsEnum(LicensingRegulatoryBody)
+  regulatoryBody: LicensingRegulatoryBody;
 
   @ApiProperty({ nullable: false })
   @IsNotEmpty()
@@ -25,9 +27,10 @@ export class CreateLicensingInfoDto {
   })
   agentId: number;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ nullable: true, enum: LicensingRegulatoryBody })
   @IsNotEmpty()
-  regulatoryBody: string;
+  @IsEnum(LicensingRegulatoryBody)
+  regulatoryBody: LicensingRegulatoryBody;
 
   @ApiPropertyOptional({ nullable: true })
   url: string;
@@ -39,9 +42,10 @@ export class CreateLicensingInfoDto {
 }
 
 export class BulkCreateLicensingInfoDocumentSingleDto {
-  @ApiPropertyOptional({ nullable: true, example: 'Corporate Affairs Commission' })
+  @ApiPropertyOptional({ nullable: true, enum: LicensingRegulatoryBody, example: LicensingRegulatoryBody.CAC_CERTIFICATE })
   @IsNotEmpty()
-  regulatoryBody: string;
+  @IsEnum(LicensingRegulatoryBody)
+  regulatoryBody: LicensingRegulatoryBody;
 
   @ApiPropertyOptional({ nullable: true, example: 'https://safe-document.pdf' })
   url: string;
@@ -53,9 +57,10 @@ export class BulkCreateLicensingInfoDocumentSingleDto {
 }
 
 export class UpdateLicensingInfoDto {
-  @ApiPropertyOptional({ nullable: true })
-  @IsNotEmpty()
-  regulatoryBody: string;
+  @ApiPropertyOptional({ nullable: true, enum: LicensingRegulatoryBody })
+  @IsOptional()
+  @IsEnum(LicensingRegulatoryBody)
+  regulatoryBody?: LicensingRegulatoryBody;
 
   @ApiPropertyOptional({ nullable: true })
   url?: string;

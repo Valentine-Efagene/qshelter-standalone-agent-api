@@ -14,7 +14,7 @@ import { AgentPoc } from './agent-poc.entity';
 import { AgentPocService } from './agent-poc.service';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { StandardApiResponse } from '../common/common.dto';
+import { ApiResult, okResponse } from '../common/common.dto';
 import { ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '@qshelter/nest-auth';
 
@@ -31,37 +31,37 @@ export class AgentPocController {
   @Post()
   async create(
     @Body() createDto: CreateAgentPocDto,
-  ): Promise<StandardApiResponse<AgentPoc>> {
+  ): Promise<ApiResult<AgentPoc>> {
     const data = await this.agentPocService.create(createDto);
-    return new StandardApiResponse(HttpStatus.CREATED, ResponseMessage.CREATED, data);
+    return okResponse(data, ResponseMessage.CREATED);
   }
 
   @Get()
-  async findAll(): Promise<StandardApiResponse<AgentPoc[]>> {
+  async findAll(): Promise<ApiResult<AgentPoc[]>> {
     const data = await this.agentPocService.findAll();
-    return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Get(':id')
   async findOne(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<StandardApiResponse<AgentPoc>> {
+  ): Promise<ApiResult<AgentPoc>> {
     const data = await this.agentPocService.findOne(id);
-    return new StandardApiResponse(HttpStatus.OK, ResponseMessage.FETCHED, data);
+    return okResponse(data, ResponseMessage.FETCHED);
   }
 
   @Patch(':id')
   async updateOne(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateAgentPocDto,
-  ): Promise<StandardApiResponse<AgentPoc>> {
+  ): Promise<ApiResult<AgentPoc>> {
     const data = await this.agentPocService.updateOne(id, updateDto);
-    return new StandardApiResponse(HttpStatus.OK, ResponseMessage.UPDATED, data);
+    return okResponse(data, ResponseMessage.UPDATED);
   }
 
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<StandardApiResponse<void>> {
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<ApiResult<void>> {
     await this.agentPocService.remove(id);
-    return new StandardApiResponse(HttpStatus.NO_CONTENT, ResponseMessage.DELETED, null);
+    return okResponse(null, ResponseMessage.DELETED);
   }
 }
