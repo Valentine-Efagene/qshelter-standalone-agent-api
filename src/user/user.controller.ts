@@ -6,23 +6,24 @@ import {
   Post,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { User } from './user.entity';
 import { UserService } from './user.service';
-import { CreateUserDto } from './user.dto';
+import { CreateUserDto, UserPaginationDto } from './user.dto';
 import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse } from '../common/common.dto';
-import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
+import { Paginated } from '../common/common.dto';
 
 @SwaggerAuth()
 @Controller('users')
 @ApiTags('User')
 @ApiResponse(OpenApiHelper.responseDoc)
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Post()
   async create(
@@ -44,7 +45,7 @@ export class UserController {
   @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
-    @Paginate() query: PaginateQuery,
+    @Query() query: UserPaginationDto,
   ): Promise<ApiResult<Paginated<User>>> {
     const data = await this.userService.findAllPaginated(query);
     return okResponse(data, ResponseMessage.FETCHED);

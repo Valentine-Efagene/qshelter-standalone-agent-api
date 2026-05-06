@@ -1,4 +1,5 @@
-import { ApiHeaderOptions, ApiResponseOptions } from '@nestjs/swagger';
+import { applyDecorators } from '@nestjs/common';
+import { ApiHeaderOptions, ApiQuery, ApiResponseOptions } from '@nestjs/swagger';
 
 export default class OpenApiHelper {
   public static userIdHeader: ApiHeaderOptions = {
@@ -118,4 +119,42 @@ export default class OpenApiHelper {
       ],
     },
   };
+
+  public static ApiPaginateQuery() {
+    return applyDecorators(
+      ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (1-based)', example: 1 }),
+      ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page', example: 20 }),
+      ApiQuery({
+        name: 'sortBy',
+        required: false,
+        isArray: true,
+        type: String,
+        description: 'Sort columns. Format: `field:ASC` or `field:DESC`. Repeat for multiple columns.',
+        example: 'createdAt:DESC',
+      }),
+      ApiQuery({ name: 'search', required: false, type: String, description: 'Full-text search string' }),
+      ApiQuery({
+        name: 'searchBy',
+        required: false,
+        isArray: true,
+        type: String,
+        description: 'Columns to search in. Defaults to all searchable columns.',
+      }),
+      ApiQuery({
+        name: 'filter',
+        required: false,
+        type: String,
+        description:
+          'Column filters. Format: `filter.field=$eq:value`. Operators: $eq $not $null $in $gt $gte $lt $lte $btw $ilike $sw $contains. Repeat for multiple filters.',
+        example: 'filter.status=$eq:PENDING',
+      }),
+      ApiQuery({
+        name: 'select',
+        required: false,
+        isArray: true,
+        type: String,
+        description: 'Columns to include in the response.',
+      }),
+    );
+  }
 }

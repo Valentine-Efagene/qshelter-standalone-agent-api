@@ -6,16 +6,17 @@ import {
   Post,
   HttpStatus,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { Referral } from './referral.entity';
 import { ReferralService } from './referral.service';
-import { CreateReferralDto } from './referral.dto';
+import { CreateReferralDto, ReferralPaginationDto } from './referral.dto';
 import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse } from '../common/common.dto';
-import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
+import { Paginated } from '../common/common.dto';
 import { User } from '../user/user.entity';
 
 @SwaggerAuth()
@@ -37,7 +38,7 @@ export class ReferralController {
   @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
-    @Paginate() query: PaginateQuery,
+    @Query() query: ReferralPaginationDto,
   ): Promise<ApiResult<Paginated<Referral>>> {
     const data = await this.referralService.findAllPaginated(query);
     return okResponse(data, ResponseMessage.FETCHED);

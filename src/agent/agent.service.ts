@@ -1,17 +1,10 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { CreateAgentDto, PaginatedAgents, ReferreePaginationDto, UpdateAgentStatusDto } from './agent.dto';
+import { AgentPaginationDto, CreateAgentDto, PaginatedAgents, ReferreePaginationDto, UpdateAgentStatusDto } from './agent.dto';
 import { Agent } from './agent.entity';
 import { UpdateAgentDto } from './agent.dto';
-import {
-  //FilterOperator,
-  //FilterSuffix,
-  PaginateQuery,
-  paginate,
-  Paginated,
-} from 'nestjs-paginate';
-import { PaginationArgs } from '../common/common.dto';
+import { Paginated, PaginationArgs, buildPaginatedResult } from '../common/common.dto';
 import CryptographyHelper from '../common/helpers/CryptographyHelper';
 import { CommissionService } from '../commission/commission.service';
 import { LicensingInfo } from '../licensing-info/licensing-info.entity';
@@ -187,18 +180,24 @@ export class AgentService {
     return this.agentDocumentService.findAllByAgent(agentId);
   }
 
-  findAllPaginated(query: PaginateQuery): Promise<Paginated<Agent>> {
-    return paginate(query, this.agentRepository, {
-      sortableColumns: ['id', 'createdAt', 'updatedAt'],
-      //nullSort: 'last',
-      defaultSortBy: [['id', 'DESC']],
-      searchableColumns: [],
-      //select: ['id'],
-      filterableColumns: {
-        //name: [FilterOperator.EQ, FilterSuffix.NOT],
-        //age: true,
-      },
-    });
+  async findAllPaginated(query: AgentPaginationDto): Promise<Paginated<Agent>> {
+    const { page = 1, limit = 20, status, agentType, from, to } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.agentRepository.createQueryBuilder('agent')
+      .orderBy('agent.createdAt', 'DESC');
+
+    if (status) qb.andWhere('agent.status = :status', { status });
+    if (agentType) qb.andWhere('agent.agentType = :agentType', { agentType });
+    if (from) qb.andWhere('agent.createdAt >= :from', { from: new Date(from) });
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      qb.andWhere('agent.createdAt <= :to', { to: toDate });
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    return buildPaginatedResult(data, total, query);
   }
 
   // findAllReferreesPaginated(query: PaginateQuery, agentId: number): Promise<Paginated<User>> {

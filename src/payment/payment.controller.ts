@@ -1,8 +1,8 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Paginate, PaginateQuery } from 'nestjs-paginate';
 import { PaymentService } from './payment.service';
 import { Payment } from './payment.entity';
+import { PaymentPaginationDto } from './payment.dto';
 
 @ApiTags('Payments')
 @Controller('payments')
@@ -10,14 +10,14 @@ export class PaymentController {
     constructor(private readonly paymentService: PaymentService) { }
 
     @Get()
-    findAll(@Paginate() query: PaginateQuery) {
+    findAll(@Query() query: PaymentPaginationDto) {
         return this.paymentService.findAllPaginated(query);
     }
 
     @Get('agent/:agentId')
     findByAgent(
         @Param('agentId', ParseIntPipe) agentId: number,
-        @Paginate() query: PaginateQuery,
+        @Query() query: PaymentPaginationDto,
     ) {
         return this.paymentService.findByAgent(agentId, query);
     }
@@ -25,7 +25,7 @@ export class PaymentController {
     @Get('customer/:customerId')
     findByCustomer(
         @Param('customerId', ParseIntPipe) customerId: number,
-        @Paginate() query: PaginateQuery,
+        @Query() query: PaymentPaginationDto,
     ) {
         return this.paymentService.findByCustomer(customerId, query);
     }

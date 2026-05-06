@@ -3,16 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { AgentConfigurationService } from '../agent-configuration/agent-configuration.service';
-import { AgentCommissionPaginationDto, CreateCommissionDto, Customer, PaginatedAgentCommissions, PaginatedCommissions, PostCommissionWithCodeDto, UpdateCommissionDto } from './commission.dto';
+import { AgentCommissionPaginationDto, CommissionPaginationDto, CreateCommissionDto, Customer, PaginatedAgentCommissions, PaginatedCommissions, PostCommissionWithCodeDto, UpdateCommissionDto } from './commission.dto';
 import { Commission } from './commission.entity';
-import {
-  //FilterOperator,
-  //FilterSuffix,
-  PaginateQuery,
-  paginate,
-  Paginated,
-} from 'nestjs-paginate';
-import { PaginationArgs } from '../common/common.dto';
+import { Paginated, PaginationDto, buildPaginatedResult } from '../common/common.dto';
 import { Referral } from '../referral/referral.entity';
 
 // https://www.npmjs.com/package/nestjs-paginate
@@ -88,18 +81,25 @@ export class CommissionService {
     return parseFloat(result.total) || 0;
   }
 
-  findAllPaginated(query: PaginateQuery): Promise<Paginated<Commission>> {
-    return paginate(query, this.commissionRepository, {
-      sortableColumns: ['id', 'createdAt', 'updatedAt'],
-      //nullSort: 'last',
-      defaultSortBy: [['id', 'DESC']],
-      searchableColumns: [],
-      //select: ['id'],
-      filterableColumns: {
-        //name: [FilterOperator.EQ, FilterSuffix.NOT],
-        //age: true,
-      },
-    });
+  async findAllPaginated(query: CommissionPaginationDto): Promise<Paginated<Commission>> {
+    const { page = 1, limit = 20, from, to, status, agentId } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.commissionRepository.createQueryBuilder('commission')
+      .leftJoin('commission.referral', 'referral')
+      .orderBy('commission.createdAt', 'DESC');
+
+    if (agentId) qb.andWhere('referral.referrerId = :agentId', { agentId });
+    if (status) qb.andWhere('commission.status = :status', { status });
+    if (from) qb.andWhere('commission.createdAt >= :from', { from: new Date(from) });
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      qb.andWhere('commission.createdAt <= :to', { to: toDate });
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    return buildPaginatedResult(data, total, query);
   }
 
   // async paginateAgentCommissions(query: PaginateQuery, agentId: number): Promise<Paginated<Commission>> {
@@ -119,7 +119,7 @@ export class CommissionService {
 
 
   async paginateAgentCommissions(query: AgentCommissionPaginationDto, agentId: number): Promise<PaginatedAgentCommissions> {
-    const { page = 1, limit = 10 } = query;
+    const { page = 1, limit = 10, from, to, status } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.commissionRepository
@@ -128,6 +128,18 @@ export class CommissionService {
       .leftJoinAndSelect('referral.referree', 'user')
       .where('referral.referrerId = :agentId', { agentId })
       .orderBy('user.createdAt', 'DESC')  // Apply sorting
+
+    if (from) {
+      queryBuilder.andWhere('commission.createdAt >= :from', { from: new Date(from) });
+    }
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      queryBuilder.andWhere('commission.createdAt <= :to', { to: toDate });
+    }
+    if (status) {
+      queryBuilder.andWhere('commission.status = :status', { status });
+    }
 
     const { entities, raw } = await queryBuilder
       .limit(limit)
@@ -216,7 +228,7 @@ export class CommissionService {
     await this.commissionRepository.delete(id);
   }
 
-  async paginate(query: PaginationArgs): Promise<PaginatedCommissions> {
+  async paginate(query: PaginationDto): Promise<PaginatedCommissions> {
     const [data, count] = await this.commissionRepository.findAndCount({
       skip: query.page > 0 ? query.page - 1 : 1,
       take: query.limit,

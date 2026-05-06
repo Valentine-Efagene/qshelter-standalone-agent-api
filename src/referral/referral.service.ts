@@ -1,17 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateReferralDto, PaginatedReferrals } from './referral.dto';
+import { CreateReferralDto, PaginatedReferrals, ReferralPaginationDto } from './referral.dto';
 import { Referral } from './referral.entity';
 import { UpdateReferralDto } from './referral.dto';
-import {
-  //FilterOperator,
-  //FilterSuffix,
-  PaginateQuery,
-  paginate,
-  Paginated,
-} from 'nestjs-paginate';
-import { PaginationArgs } from '../common/common.dto';
+import { Paginated, PaginationArgs, buildPaginatedResult } from '../common/common.dto';
 import { User } from '../user/user.entity';
 
 // https://www.npmjs.com/package/nestjs-paginate
@@ -51,20 +44,25 @@ export class ReferralService {
     return referral
   }
 
-  findAllPaginated(query: PaginateQuery): Promise<Paginated<Referral>> {
-    return paginate(query, this.referralRepository, {
-      sortableColumns: ['id', 'createdAt', 'updatedAt'],
-      //nullSort: 'last',
-      defaultSortBy: [['id', 'DESC']],
-      searchableColumns: ['referree.firstName', 'referree.lastName', 'referree.email'],
-      // loadEagerRelations: true,
-      relations: ['referree', 'referrer'],
-      //select: ['id'],
-      filterableColumns: {
-        //name: [FilterOperator.EQ, FilterSuffix.NOT],
-        //age: true,
-      },
-    });
+  async findAllPaginated(query: ReferralPaginationDto): Promise<Paginated<Referral>> {
+    const { page = 1, limit = 20, from, to, referrerId } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.referralRepository.createQueryBuilder('referral')
+      .leftJoinAndSelect('referral.referree', 'referree')
+      .leftJoinAndSelect('referral.referrer', 'referrer')
+      .orderBy('referral.createdAt', 'DESC');
+
+    if (referrerId) qb.andWhere('referral.referrerId = :referrerId', { referrerId });
+    if (from) qb.andWhere('referral.createdAt >= :from', { from: new Date(from) });
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      qb.andWhere('referral.createdAt <= :to', { to: toDate });
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    return buildPaginatedResult(data, total, query);
   }
 
   // findAllPaginatedByAgent(query: PaginateQuery, agentId: number): Promise<Paginated<User>> {

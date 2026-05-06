@@ -15,13 +15,12 @@ import {
 } from '@nestjs/common';
 import { Agent } from './agent.entity';
 import { AgentService } from './agent.service';
-import { CreateAgentDto, ReferreePaginationDto, UpdateAgentDto, UpdateAgentStatusDto } from './agent.dto';
+import { AgentPaginationDto, CreateAgentDto, ReferreePaginationDto, UpdateAgentDto, UpdateAgentStatusDto } from './agent.dto';
 import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
-import { ApiResult, okResponse } from '../common/common.dto';
-import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
+import { ApiResult, okResponse, Paginated } from '../common/common.dto';
 import { PaginatedUsers } from '../user/user.dto';
 import { AgentCommissionPaginationDto, PaginatedCommissions } from '../commission/commission.dto';
 import { AgentDocument } from '../agent-document/agent-document.entity';
@@ -57,7 +56,7 @@ export class AgentController {
   @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
-    @Paginate() query: PaginateQuery,
+    @Query() query: AgentPaginationDto,
   ): Promise<ApiResult<Paginated<Agent>>> {
     const data = await this.agentService.findAllPaginated(query);
     return okResponse(data, ResponseMessage.FETCHED);

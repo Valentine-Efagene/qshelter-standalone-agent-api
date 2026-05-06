@@ -76,7 +76,57 @@ export class PaginatedCommissions {
   meta: PaginationMeta;
 }
 
+export class CommissionPaginationDto extends PaginationDto {
+  @ApiPropertyOptional({
+    description: 'Filter commissions created on or after this date (ISO 8601)',
+    example: '2025-01-01',
+  })
+  @IsOptional()
+  @IsString()
+  from?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter commissions created on or before this date (ISO 8601)',
+    example: '2025-12-31',
+  })
+  @IsOptional()
+  @IsString()
+  to?: string;
+
+  @ApiPropertyOptional({ enum: CommissionStatus, description: 'Filter by status' })
+  @IsOptional()
+  @IsEnum(CommissionStatus)
+  status?: CommissionStatus;
+
+  @ApiPropertyOptional({ description: 'Filter by agent ID', example: 1 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  @Transform(({ value }) => parseInt(value, 10))
+  agentId?: number;
+}
+
 export class AgentCommissionPaginationDto extends PaginationDto {
+  @ApiPropertyOptional({
+    description: 'Filter commissions created on or after this date (ISO 8601)',
+    example: '2025-01-01',
+  })
+  @IsOptional()
+  @IsString()
+  from?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter commissions created on or before this date (ISO 8601)',
+    example: '2025-12-31',
+  })
+  @IsOptional()
+  @IsString()
+  to?: string;
+
+  @ApiPropertyOptional({ enum: CommissionStatus, description: 'Filter by status' })
+  @IsOptional()
+  @IsEnum(CommissionStatus)
+  status?: CommissionStatus;
 }
 
 export class Customer extends PickType(User, ['id', 'avatar', 'firstName', 'lastName', 'email', 'phone']) {

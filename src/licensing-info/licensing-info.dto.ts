@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { PaginationDto } from '../common/common.dto';
 import { DocumentStatus } from '../common/common.enum';
 import { LicensingRegulatoryBody } from './licensing-info.enums';
 
@@ -87,4 +88,20 @@ export class UpdatePublicationStatusDto {
   @ApiProperty({ nullable: false, example: 1 })
   @IsNotEmpty()
   reviewerId: number;
+}
+
+export class LicensingInfoPaginationDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Filter by agent ID', example: 1 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  agentId?: number;
+
+  @ApiPropertyOptional({ description: 'Filter records created on or after this date (ISO 8601)', example: '2025-01-01' })
+  @IsOptional()
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Filter records created on or before this date (ISO 8601)', example: '2025-12-31' })
+  @IsOptional()
+  to?: string;
 }

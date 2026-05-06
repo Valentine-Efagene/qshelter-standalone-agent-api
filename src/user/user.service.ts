@@ -2,9 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-import { CreateUserDto, PaginatedUsers, UpdateUserDto } from './user.dto';
-import { PaginationArgs } from '../common/common.dto';
-import { paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
+import { CreateUserDto, PaginatedUsers, UpdateUserDto, UserPaginationDto } from './user.dto';
+import { Paginated, PaginationArgs, buildPaginatedResult } from '../common/common.dto';
 import { ReferreePaginationDto } from '../agent/agent.dto';
 
 @Injectable()
@@ -27,18 +26,22 @@ export class UserService {
     return this.userRepository.findOneBy({ id });
   }
 
-  findAllPaginated(query: PaginateQuery): Promise<Paginated<User>> {
-    return paginate(query, this.userRepository, {
-      sortableColumns: ['id', 'createdAt', 'updatedAt'],
-      //nullSort: 'last',
-      defaultSortBy: [['id', 'DESC']],
-      searchableColumns: [],
-      //select: ['id'],
-      filterableColumns: {
-        //name: [FilterOperator.EQ, FilterSuffix.NOT],
-        //age: true,
-      },
-    });
+  async findAllPaginated(query: UserPaginationDto): Promise<Paginated<User>> {
+    const { page = 1, limit = 20, from, to } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.userRepository.createQueryBuilder('user')
+      .orderBy('user.createdAt', 'DESC');
+
+    if (from) qb.andWhere('user.createdAt >= :from', { from: new Date(from) });
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      qb.andWhere('user.createdAt <= :to', { to: toDate });
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    return buildPaginatedResult(data, total, query);
   }
 
   async agentReferrees(agentId: number): Promise<User[]> {
@@ -54,7 +57,7 @@ export class UserService {
   }
 
   async paginateAgentReferrees(query: ReferreePaginationDto, agentId: number): Promise<PaginatedUsers> {
-    const { page = 1, limit = 10 } = query;
+    const { page = 1, limit = 10, from, to } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.userRepository
@@ -72,6 +75,15 @@ export class UserService {
       .where('referral.referrerId = :agentId', { agentId })
       .groupBy('user.id')  // Group by user to calculate total commission per user
       .orderBy('user.createdAt', 'DESC')  // Apply sorting
+
+    if (from) {
+      queryBuilder.andWhere('user.createdAt >= :from', { from: new Date(from) });
+    }
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      queryBuilder.andWhere('user.createdAt <= :to', { to: toDate });
+    }
 
     const { entities, raw } = await queryBuilder
       .limit(limit)

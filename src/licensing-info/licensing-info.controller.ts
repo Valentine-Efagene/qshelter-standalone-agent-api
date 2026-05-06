@@ -8,11 +8,13 @@ import {
   HttpStatus,
   ParseIntPipe,
   Patch,
+  Query,
 } from '@nestjs/common';
 import { LicensingInfo } from './licensing-info.entity';
 import { LicensingInfoService } from './licensing-info.service';
 import {
   CreateLicensingInfoControllerDto,
+  LicensingInfoPaginationDto,
   UpdateLicensingInfoDto,
 } from './licensing-info.dto';
 import {
@@ -24,8 +26,7 @@ import {
 import { ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/helpers/OpenApiHelper';
-import { ApiResult, okResponse } from '../common/common.dto';
-import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
+import { ApiResult, okResponse, Paginated } from '../common/common.dto';
 
 @SwaggerAuth()
 @Controller('licensing-infos')
@@ -54,7 +55,7 @@ export class LicensingInfoController {
   @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
-    @Paginate() query: PaginateQuery,
+    @Query() query: LicensingInfoPaginationDto,
   ): Promise<ApiResult<Paginated<LicensingInfo>>> {
     const data = await this.licensingInfoService.findAllPaginated(query);
     return okResponse(data, ResponseMessage.FETCHED);

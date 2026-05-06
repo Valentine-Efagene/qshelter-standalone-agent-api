@@ -277,5 +277,39 @@ export class PaginatedAgents {
 }
 
 export class ReferreePaginationDto extends PaginationDto {
+  @ApiPropertyOptional({
+    description: 'Filter referrals created on or after this date (ISO 8601)',
+    example: '2025-01-01',
+  })
+  @IsOptional()
+  from?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter referrals created on or before this date (ISO 8601)',
+    example: '2025-12-31',
+  })
+  @IsOptional()
+  to?: string;
+
+}
+
+export class AgentPaginationDto extends PaginationDto {
+  @ApiPropertyOptional({ enum: AgentStatus, description: 'Filter by onboarding status' })
+  @IsOptional()
+  @IsEnum(AgentStatus)
+  status?: AgentStatus;
+
+  @ApiPropertyOptional({ enum: AgentType, description: 'Filter by agent type' })
+  @IsOptional()
+  @IsEnum(AgentType)
+  agentType?: AgentType;
+
+  @ApiPropertyOptional({ description: 'Filter agents created on or after this date (ISO 8601)', example: '2025-01-01' })
+  @IsOptional()
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Filter agents created on or before this date (ISO 8601)', example: '2025-12-31' })
+  @IsOptional()
+  to?: string;
 }
 

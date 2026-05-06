@@ -3,6 +3,8 @@ import { UserRole } from './user.enums';
 import { User } from './user.entity';
 import { PickType } from '@nestjs/swagger';
 import { PaginationMeta } from '../common/common.dto';
+import { IsOptional } from 'class-validator';
+import { PaginationDto } from '../common/common.dto';
 
 export class CreateUserDto {
   @ApiProperty({ nullable: true, example: 'Jane' })
@@ -27,6 +29,16 @@ export class PaginatedUsers {
   data: User[];
 
   meta: PaginationMeta;
+}
+
+export class UserPaginationDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Filter users created on or after this date (ISO 8601)', example: '2025-01-01' })
+  @IsOptional()
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Filter users created on or before this date (ISO 8601)', example: '2025-12-31' })
+  @IsOptional()
+  to?: string;
 }
 
 export class UserWithCommissionDto extends PickType(User, ['id', 'firstName', 'lastName', 'avatar', 'email', 'createdAt'] as const) {

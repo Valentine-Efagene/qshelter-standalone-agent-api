@@ -9,16 +9,17 @@ import {
   Patch,
   BadRequestException,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { Commission } from './commission.entity';
 import { CommissionService } from './commission.service';
-import { PostCommissionWithCodeDto, UpdateCommissionDto } from './commission.dto';
+import { CommissionPaginationDto, PostCommissionWithCodeDto, UpdateCommissionDto } from './commission.dto';
 import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ErrorMessage, ResponseMessage } from '../common/common.enum';
 import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse } from '../common/common.dto';
-import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
+import { Paginated } from '../common/common.dto';
 import { CommissionStatus } from './commission.enums';
 
 @SwaggerAuth()
@@ -60,7 +61,7 @@ export class CommissionController {
   @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
-    @Paginate() query: PaginateQuery,
+    @Query() query: CommissionPaginationDto,
   ): Promise<ApiResult<Paginated<Commission>>> {
     const data = await this.commissionService.findAllPaginated(query);
     return okResponse(data, ResponseMessage.FETCHED);

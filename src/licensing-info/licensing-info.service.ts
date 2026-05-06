@@ -5,16 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { CreateLicensingInfoDto } from './licensing-info.dto';
+import { CreateLicensingInfoDto, LicensingInfoPaginationDto } from './licensing-info.dto';
 import { LicensingInfo } from './licensing-info.entity';
 import { UpdateLicensingInfoDto } from './licensing-info.dto';
-import {
-  //FilterOperator,
-  //FilterSuffix,
-  PaginateQuery,
-  paginate,
-  Paginated,
-} from 'nestjs-paginate';
+import { Paginated, buildPaginatedResult } from '../common/common.dto';
 import { AgentDocument } from '../agent-document/agent-document.entity';
 import { DocumentStatus } from '../common/common.enum';
 import { Agent } from '../agent/agent.entity';
@@ -60,18 +54,23 @@ export class LicensingInfoService {
     return this.licensingInfoRepository.find();
   }
 
-  findAllPaginated(query: PaginateQuery): Promise<Paginated<LicensingInfo>> {
-    return paginate(query, this.licensingInfoRepository, {
-      sortableColumns: ['id', 'createdAt', 'updatedAt'],
-      //nullSort: 'last',
-      defaultSortBy: [['id', 'DESC']],
-      searchableColumns: [],
-      //select: ['id'],
-      filterableColumns: {
-        //name: [FilterOperator.EQ, FilterSuffix.NOT],
-        //age: true,
-      },
-    });
+  async findAllPaginated(query: LicensingInfoPaginationDto): Promise<Paginated<LicensingInfo>> {
+    const { page = 1, limit = 20, from, to, agentId } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.licensingInfoRepository.createQueryBuilder('info')
+      .orderBy('info.createdAt', 'DESC');
+
+    if (agentId) qb.andWhere('info.agentId = :agentId', { agentId });
+    if (from) qb.andWhere('info.createdAt >= :from', { from: new Date(from) });
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      qb.andWhere('info.createdAt <= :to', { to: toDate });
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    return buildPaginatedResult(data, total, query);
   }
 
   async findOne(id: number): Promise<LicensingInfo> {

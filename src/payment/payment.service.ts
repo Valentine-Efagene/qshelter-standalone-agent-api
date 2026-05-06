@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaginateQuery, paginate, Paginated } from 'nestjs-paginate';
+import { Paginated, buildPaginatedResult } from '../common/common.dto';
+import { PaymentPaginationDto } from './payment.dto';
 import { Payment } from './payment.entity';
 import { PaymentStatus } from './payment.enums';
 
@@ -12,17 +13,24 @@ export class PaymentService {
         private readonly paymentRepository: Repository<Payment>,
     ) { }
 
-    findAllPaginated(query: PaginateQuery): Promise<Paginated<Payment>> {
-        return paginate(query, this.paymentRepository, {
-            sortableColumns: ['id', 'createdAt', 'amount', 'paymentDate'],
-            defaultSortBy: [['paymentDate', 'DESC']],
-            filterableColumns: {
-                agentId: true,
-                customerId: true,
-                status: true,
-                type: true,
-            },
-        });
+    async findAllPaginated(query: PaymentPaginationDto): Promise<Paginated<Payment>> {
+        const { page = 1, limit = 20, status, type, from, to } = query;
+        const skip = (page - 1) * limit;
+
+        const qb = this.paymentRepository.createQueryBuilder('payment')
+            .orderBy('payment.paymentDate', 'DESC');
+
+        if (status) qb.andWhere('payment.status = :status', { status });
+        if (type) qb.andWhere('payment.type = :type', { type });
+        if (from) qb.andWhere('payment.paymentDate >= :from', { from: new Date(from) });
+        if (to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            qb.andWhere('payment.paymentDate <= :to', { to: toDate });
+        }
+
+        const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+        return buildPaginatedResult(data, total, query);
     }
 
     async findOne(id: number): Promise<Payment> {
@@ -33,21 +41,46 @@ export class PaymentService {
         return payment;
     }
 
-    findByAgent(agentId: number, query: PaginateQuery): Promise<Paginated<Payment>> {
-        return paginate(query, this.paymentRepository, {
-            sortableColumns: ['id', 'createdAt', 'amount', 'paymentDate'],
-            defaultSortBy: [['paymentDate', 'DESC']],
-            where: { agentId },
-            filterableColumns: { status: true, type: true },
-        });
+    async findByAgent(agentId: number, query: PaymentPaginationDto): Promise<Paginated<Payment>> {
+        const { page = 1, limit = 20, status, type, from, to } = query;
+        const skip = (page - 1) * limit;
+
+        const qb = this.paymentRepository.createQueryBuilder('payment')
+            .where('payment.agentId = :agentId', { agentId })
+            .orderBy('payment.paymentDate', 'DESC');
+
+        if (status) qb.andWhere('payment.status = :status', { status });
+        if (type) qb.andWhere('payment.type = :type', { type });
+        if (from) qb.andWhere('payment.paymentDate >= :from', { from: new Date(from) });
+        if (to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            qb.andWhere('payment.paymentDate <= :to', { to: toDate });
+        }
+
+        const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+        return buildPaginatedResult(data, total, query);
     }
 
-    findByCustomer(customerId: number, query: PaginateQuery): Promise<Paginated<Payment>> {
-        return paginate(query, this.paymentRepository, {
-            sortableColumns: ['id', 'createdAt', 'amount', 'paymentDate'],
-            defaultSortBy: [['paymentDate', 'DESC']],
-            where: { customerId },
-        });
+    async findByCustomer(customerId: number, query: PaymentPaginationDto): Promise<Paginated<Payment>> {
+        const { page = 1, limit = 20, status, type, from, to } = query;
+        const skip = (page - 1) * limit;
+
+        const qb = this.paymentRepository.createQueryBuilder('payment')
+            .where('payment.customerId = :customerId', { customerId })
+            .orderBy('payment.paymentDate', 'DESC');
+
+        if (status) qb.andWhere('payment.status = :status', { status });
+        if (type) qb.andWhere('payment.type = :type', { type });
+        if (from) qb.andWhere('payment.paymentDate >= :from', { from: new Date(from) });
+        if (to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            qb.andWhere('payment.paymentDate <= :to', { to: toDate });
+        }
+
+        const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+        return buildPaginatedResult(data, total, query);
     }
 
     async sumByAgent(agentId: number): Promise<number> {

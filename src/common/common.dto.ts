@@ -194,28 +194,33 @@ export class PaginationMeta {
   filter?: FilterInput[];
 }
 
-export declare class Paginated<T> {
+export interface Paginated<T> {
   data: T[];
   meta: {
     itemsPerPage: number;
     totalItems: number;
     currentPage: number;
     totalPages: number;
-    sortBy?: string[];
-    searchBy?: string[];
-    search?: string;
-    select?: string[];
-    filter?: {
-      [column: string]: string | string[];
-    };
   };
-  // links: {
-  //   first?: string;
-  //   previous?: string;
-  //   current: string;
-  //   next?: string;
-  //   last?: string;
-  // };
+}
+
+/** Build the standard paginated response shape from a `getManyAndCount()` result. */
+export function buildPaginatedResult<T>(
+  data: T[],
+  total: number,
+  query: { page?: number; limit?: number },
+): Paginated<T> {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  return {
+    data,
+    meta: {
+      itemsPerPage: limit,
+      totalItems: total,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
 export class PaginationDto {

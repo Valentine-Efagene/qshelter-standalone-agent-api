@@ -1,8 +1,8 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Paginate, PaginateQuery } from 'nestjs-paginate';
 import { TransactionService } from './transaction.service';
 import { Transaction } from './transaction.entity';
+import { TransactionPaginationDto } from './transaction.dto';
 
 @ApiTags('Transactions')
 @Controller('transactions')
@@ -10,14 +10,14 @@ export class TransactionController {
     constructor(private readonly transactionService: TransactionService) { }
 
     @Get()
-    findAll(@Paginate() query: PaginateQuery) {
+    findAll(@Query() query: TransactionPaginationDto) {
         return this.transactionService.findAllPaginated(query);
     }
 
     @Get('agent/:agentId')
     findByAgent(
         @Param('agentId', ParseIntPipe) agentId: number,
-        @Paginate() query: PaginateQuery,
+        @Query() query: TransactionPaginationDto,
     ) {
         return this.transactionService.findByAgent(agentId, query);
     }
@@ -25,7 +25,7 @@ export class TransactionController {
     @Get('wallet/:walletId')
     findByWallet(
         @Param('walletId', ParseIntPipe) walletId: number,
-        @Paginate() query: PaginateQuery,
+        @Query() query: TransactionPaginationDto,
     ) {
         return this.transactionService.findByWallet(walletId, query);
     }
