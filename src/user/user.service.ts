@@ -101,7 +101,7 @@ export class UserService {
     });
 
     const response = {
-      data: mappedResult,
+      items: mappedResult,
       meta: {
         itemsPerPage: query.limit,
         totalItems,
@@ -131,7 +131,7 @@ export class UserService {
     });
 
     return {
-      data,
+      items: data,
       meta: {
         currentPage: query.page,
         itemsPerPage: query?.limit,

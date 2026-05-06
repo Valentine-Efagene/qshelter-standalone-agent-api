@@ -256,10 +256,6 @@ export class AgentService {
     updateDto: UpdateAgentStatusDto,
     request: Request
   ): Promise<Agent> {
-    if (!ADMIN_ONLY_STATUSES.has(updateDto.status)) {
-      throw new BadRequestException('Only APPROVED or REJECTED statuses are allowed on this endpoint');
-    }
-
     if (
       updateDto.status === AgentStatus.REJECTED &&
       !updateDto.comment
@@ -288,8 +284,12 @@ export class AgentService {
       throw new BadRequestException(`Cannot update status from terminal state ${agent.status}`);
     }
 
-    if (updateDto.status === AgentStatus.APPROVED && agent.status !== AgentStatus.SUBMITTED) {
-      throw new BadRequestException('Agent can only be approved after reaching SUBMITTED status');
+    if (
+      updateDto.status === AgentStatus.APPROVED &&
+      agent.status !== AgentStatus.SUBMITTED &&
+      agent.status !== AgentStatus.REJECTED
+    ) {
+      throw new BadRequestException('Agent can only be approved after reaching SUBMITTED or REJECTED status');
     }
 
     if (updateDto.status === AgentStatus.APPROVED) {

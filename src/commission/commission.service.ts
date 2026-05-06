@@ -50,7 +50,7 @@ export class CommissionService {
       throw new BadRequestException('Referral not found')
     }
 
-    let commissionRate = this.configService.get<number>('COMMISSION_RATE');
+    let commissionRate = Number(this.configService.get('COMMISSION_RATE') ?? 0.05);
     try {
       const config = await this.agentConfigurationService.findByAgentType(referral.agentType);
       commissionRate = Number(config.commissionRate);

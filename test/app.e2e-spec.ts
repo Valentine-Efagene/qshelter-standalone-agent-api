@@ -1,10 +1,12 @@
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.test.env' });
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
+import { sign } from 'jsonwebtoken';
 import { faker } from '@faker-js/faker/.';
 import DataEntry from '../src/common/helpers/DataEntry';
 import { UserService } from '../src/user/user.service';
@@ -34,6 +36,7 @@ describe('Agent Onboarding Story (e2e)', () => {
     let agent: Agent;
     let agentUser: User;
     let customer: User;
+    let agentToken: string;
 
     let reuploadDto: UpdateAgentDocumentDto;
     let updateAgentDocumentStatusDto: UpdateAgentDocumentStatusDto;
@@ -43,6 +46,10 @@ describe('Agent Onboarding Story (e2e)', () => {
 
     let firstCommissionId: number;
     let totalCommissionFromPosts = 0;
+
+    const auth = () => ({ Authorization: `Bearer ${agentToken}` });
+
+    const req = () => request(app.getHttpServer());
 
     beforeAll(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -91,9 +98,15 @@ describe('Agent Onboarding Story (e2e)', () => {
     it('creates an agent profile from a signed-up user', async () => {
         agentUser = await userService.create(DataEntry.createUserDto);
         createAgentDto = DataEntry.buildCreateAgentDto(agentUser.id);
+        agentToken = sign(
+            { user_id: agentUser.id, roles: [UserRole.AGENT] },
+            process.env.JWT_SECRET as string,
+            { expiresIn: '1h' },
+        );
 
-        await request(app.getHttpServer())
+        await req()
             .post('/agents')
+            .set(auth())
             .send(createAgentDto)
             .expect(HttpStatus.CREATED)
             .expect((res) => {
@@ -109,8 +122,9 @@ describe('Agent Onboarding Story (e2e)', () => {
     it('simulates email verification advancing status to EMAIL_VERIFIED', async () => {
         // EMAIL_VERIFIED is normally triggered by the external auth service.
         // We exercise the same update-status endpoint it would call.
-        await request(app.getHttpServer())
+        await req()
             .post(`/agents/${agent.id}/update-status`)
+            .set(auth())
             .send({
                 status: AgentStatus.EMAIL_VERIFIED,
                 reviewerId: agentUser.id,
@@ -122,8 +136,9 @@ describe('Agent Onboarding Story (e2e)', () => {
     });
 
     it('agent updates bank details and advances status to PROFILE_SETUP', async () => {
-        await request(app.getHttpServer())
+        await req()
             .patch(`/agents/${agent.id}`)
+            .set(auth())
             .send({
                 id: agent.id,
                 bankName: 'Access Bank Plc',
@@ -136,8 +151,9 @@ describe('Agent Onboarding Story (e2e)', () => {
                 expect(res.body.data.accountNumber).toBe('0123456789');
             });
 
-        await request(app.getHttpServer())
+        await req()
             .post(`/agents/${agent.id}/update-status`)
+            .set(auth())
             .send({
                 status: AgentStatus.PROFILE_SETUP,
                 reviewerId: agentUser.id,
@@ -149,16 +165,18 @@ describe('Agent Onboarding Story (e2e)', () => {
     });
 
     it('retrieves the newly created agent by id and by user id', async () => {
-        await request(app.getHttpServer())
+        await req()
             .get(`/agents/${agent.id}`)
+            .set(auth())
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(res.body.data.id).toBe(agent.id);
                 expect(res.body.data.name).toBe(createAgentDto.name);
             });
 
-        await request(app.getHttpServer())
+        await req()
             .get(`/agents/by-user/${agentUser.id}`)
+            .set(auth())
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(res.body.data.id).toBe(agent.id);
@@ -166,8 +184,9 @@ describe('Agent Onboarding Story (e2e)', () => {
     });
 
     it('loads the agent document bucket and starts with pending review', async () => {
-        await request(app.getHttpServer())
+        await req()
             .get(`/agents/${agent.id}/agent-documents`)
+            .set(auth())
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(Array.isArray(res.body.data)).toBe(true);
@@ -177,8 +196,9 @@ describe('Agent Onboarding Story (e2e)', () => {
     });
 
     it('reuploads a document and keeps the total document count stable', async () => {
-        const docsBefore = await request(app.getHttpServer())
+        const docsBefore = await req()
             .get(`/agents/${agent.id}/agent-documents`)
+            .set(auth())
             .expect(HttpStatus.OK);
 
         const documentCountBefore = docsBefore.body.data.length;
@@ -189,8 +209,9 @@ describe('Agent Onboarding Story (e2e)', () => {
             name: 'Updated onboarding document',
         };
 
-        await request(app.getHttpServer())
+        await req()
             .patch(`/agent-documents/${firstDocumentId}`)
+            .set(auth())
             .send(reuploadDto)
             .expect(HttpStatus.OK)
             .expect((res) => {
@@ -199,15 +220,17 @@ describe('Agent Onboarding Story (e2e)', () => {
                 expect(res.body.data.status).toBe(DocumentStatus.PENDING);
             });
 
-        await request(app.getHttpServer())
+        await req()
             .get(`/agents/${agent.id}`)
+            .set(auth())
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(res.body.data.status).toBe(AgentStatus.DOCUMENTS_UPLOADED);
             });
 
-        await request(app.getHttpServer())
+        await req()
             .get(`/agents/${agent.id}/agent-documents`)
+            .set(auth())
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(res.body.data.length).toBe(documentCountBefore);
@@ -215,8 +238,9 @@ describe('Agent Onboarding Story (e2e)', () => {
     });
 
     it('agent accepts terms and submits application advancing status to SUBMITTED', async () => {
-        await request(app.getHttpServer())
+        await req()
             .post(`/agents/${agent.id}/update-status`)
+            .set(auth())
             .send({
                 status: AgentStatus.SUBMITTED,
                 reviewerId: agentUser.id,
@@ -228,8 +252,9 @@ describe('Agent Onboarding Story (e2e)', () => {
     });
 
     it('enforces decline reason and supports document review transitions', async () => {
-        const docs = await request(app.getHttpServer())
+        const docs = await req()
             .get(`/agents/${agent.id}/agent-documents`)
+            .set(auth())
             .expect(HttpStatus.OK);
 
         const firstDocumentId = docs.body.data[0].id;
@@ -239,16 +264,18 @@ describe('Agent Onboarding Story (e2e)', () => {
             reviewerId: 1,
         };
 
-        await request(app.getHttpServer())
+        await req()
             .post(`/agent-documents/${firstDocumentId}/update-status`)
+            .set(auth())
             .send(updateAgentDocumentStatusDto)
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(res.body.data.status).toBe(DocumentStatus.APPROVED);
             });
 
-        await request(app.getHttpServer())
+        await req()
             .post(`/agent-documents/${firstDocumentId}/update-status`)
+            .set(auth())
             .send({
                 ...updateAgentDocumentStatusDto,
                 status: DocumentStatus.DECLINED,
@@ -259,8 +286,9 @@ describe('Agent Onboarding Story (e2e)', () => {
                 expect(res.body.message).toBe(ErrorMessage.NO_REASON_DECLINE);
             });
 
-        await request(app.getHttpServer())
+        await req()
             .post(`/agent-documents/${firstDocumentId}/update-status`)
+            .set(auth())
             .send({
                 ...updateAgentDocumentStatusDto,
                 status: DocumentStatus.DECLINED,
@@ -272,8 +300,9 @@ describe('Agent Onboarding Story (e2e)', () => {
                 expect(res.body.data.declineReason).toBe('Malformed document');
             });
 
-        await request(app.getHttpServer())
+        await req()
             .post(`/agent-documents/${firstDocumentId}/update-status`)
+            .set(auth())
             .send({
                 ...updateAgentDocumentStatusDto,
                 status: DocumentStatus.APPROVED,
@@ -286,8 +315,9 @@ describe('Agent Onboarding Story (e2e)', () => {
     }, 20000);
 
     it('moves agent through reviewer statuses and validates rejection reason rule', async () => {
-        await request(app.getHttpServer())
+        await req()
             .post(`/agents/${agent.id}/update-status`)
+            .set(auth())
             .send({
                 status: AgentStatus.REJECTED,
                 reviewerId: 1,
@@ -298,8 +328,9 @@ describe('Agent Onboarding Story (e2e)', () => {
                 expect(res.body.message).toBe(ErrorMessage.NO_REASON_DECLINE);
             });
 
-        await request(app.getHttpServer())
+        await req()
             .post(`/agents/${agent.id}/update-status`)
+            .set(auth())
             .send({
                 status: AgentStatus.REJECTED,
                 reviewerId: 1,
@@ -316,8 +347,9 @@ describe('Agent Onboarding Story (e2e)', () => {
             reviewerId: 1,
         };
 
-        await request(app.getHttpServer())
+        await req()
             .post(`/agents/${agent.id}/update-status`)
+            .set(auth())
             .send(updateAgentStatusDto)
             .expect(HttpStatus.OK)
             .expect((res) => {
@@ -339,16 +371,18 @@ describe('Agent Onboarding Story (e2e)', () => {
             referreeId: customer.id,
         };
 
-        await request(app.getHttpServer())
+        await req()
             .post('/referrals')
+            .set(auth())
             .send(createReferralDto)
             .expect(HttpStatus.CREATED);
 
-        await request(app.getHttpServer())
+        await req()
             .get(`/agents/${agent.id}/referrees`)
+            .set(auth())
             .expect(HttpStatus.OK)
             .expect((res) => {
-                expect(res.body.data.data.length).toBeGreaterThan(0);
+                expect(res.body.data.items.length).toBeGreaterThan(0);
             });
     });
 
@@ -359,13 +393,15 @@ describe('Agent Onboarding Story (e2e)', () => {
             userId: customer.id,
         };
 
-        const firstCommissionRes = await request(app.getHttpServer())
+        const firstCommissionRes = await req()
             .post('/commissions')
+            .set(auth())
             .send(createCommissionDto)
             .expect(HttpStatus.CREATED);
 
-        const secondCommissionRes = await request(app.getHttpServer())
+        const secondCommissionRes = await req()
             .post('/commissions')
+            .set(auth())
             .send(createCommissionDto)
             .expect(HttpStatus.CREATED);
 
@@ -375,8 +411,9 @@ describe('Agent Onboarding Story (e2e)', () => {
             Number(firstCommissionRes.body.data.amount) +
             Number(secondCommissionRes.body.data.amount);
 
-        await request(app.getHttpServer())
+        await req()
             .get(`/agents/${agent.id}/total-commission`)
+            .set(auth())
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(Number(res.body.data)).toBe(totalCommissionFromPosts);
@@ -387,8 +424,9 @@ describe('Agent Onboarding Story (e2e)', () => {
             status: CommissionStatus.DECLINED,
         };
 
-        await request(app.getHttpServer())
+        await req()
             .patch(`/commissions/${firstCommissionId}`)
+            .set(auth())
             .send({
                 ...updateCommissionDto,
                 comment: null,
@@ -398,8 +436,9 @@ describe('Agent Onboarding Story (e2e)', () => {
                 expect(res.body.message).toBe(ErrorMessage.NO_COMMENT_DECLINE);
             });
 
-        await request(app.getHttpServer())
+        await req()
             .patch(`/commissions/${firstCommissionId}`)
+            .set(auth())
             .send(updateCommissionDto)
             .expect(HttpStatus.OK)
             .expect((res) => {
@@ -407,8 +446,9 @@ describe('Agent Onboarding Story (e2e)', () => {
                 expect(res.body.data.status).toBe(CommissionStatus.DECLINED);
             });
 
-        await request(app.getHttpServer())
+        await req()
             .patch(`/commissions/${firstCommissionId}`)
+            .set(auth())
             .send({
                 status: CommissionStatus.PAID,
             })
@@ -420,8 +460,9 @@ describe('Agent Onboarding Story (e2e)', () => {
     });
 
     it('analytics endpoint returns correct dashboard metrics', async () => {
-        await request(app.getHttpServer())
+        await req()
             .get(`/analytics/agent/${agent.id}`)
+            .set(auth())
             .expect(HttpStatus.OK)
             .expect((res) => {
                 const metrics = res.body;

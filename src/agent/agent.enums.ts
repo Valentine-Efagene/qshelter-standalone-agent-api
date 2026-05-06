@@ -36,5 +36,5 @@ export const ADMIN_ONLY_STATUSES = new Set([AgentStatus.APPROVED, AgentStatus.RE
 /**
  * Terminal stages — no further progression allowed.
  */
-export const TERMINAL_STATUSES = new Set([AgentStatus.APPROVED, AgentStatus.REJECTED]);
+export const TERMINAL_STATUSES = new Set([AgentStatus.APPROVED]);
 

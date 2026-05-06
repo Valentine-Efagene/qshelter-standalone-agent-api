@@ -84,14 +84,14 @@ export class DeclineDocumentDto {
 /** Returned by every successful endpoint. */
 export interface SuccessResponse<T> {
   ok: true;
-  body: T;
+  data: T;
   message: string;
 }
 
 /** Returned by every failed endpoint (HTTP errors, validation, DB errors). */
 export interface ErrorResponse {
   ok: false;
-  body: null;
+  data: null;
   message: string;
   /** Optional list of field-level validation messages. */
   errors?: string[];
@@ -103,23 +103,23 @@ export type ApiResult<T> = SuccessResponse<T> | ErrorResponse;
 // Keep the name `StandardApiResponse` as a class for Swagger compatibility.
 export class StandardApiResponse<T = any> implements SuccessResponse<T> {
   ok: true = true;
-  body: T;
+  data: T;
   message: string;
 
-  constructor(message: string, body: T) {
+  constructor(message: string, data: T) {
     this.message = message;
-    this.body = body;
+    this.data = data;
   }
 }
 
 /** Factory helper — use in controllers for success paths. */
-export function okResponse<T>(body: T, message: string): SuccessResponse<T> {
-  return { ok: true, body, message };
+export function okResponse<T>(data: T, message: string): SuccessResponse<T> {
+  return { ok: true, data, message };
 }
 
 /** Factory helper — use in exception filters / error paths. */
 export function failResponse(message: string, errors?: string[]): ErrorResponse {
-  return { ok: false, body: null, message, ...(errors ? { errors } : {}) };
+  return { ok: false, data: null, message, ...(errors ? { errors } : {}) };
 }
 
 export class DocumentReuploadDto {
@@ -195,7 +195,7 @@ export class PaginationMeta {
 }
 
 export interface Paginated<T> {
-  data: T[];
+  items: T[];
   meta: {
     itemsPerPage: number;
     totalItems: number;
@@ -213,7 +213,7 @@ export function buildPaginatedResult<T>(
   const page = query.page ?? 1;
   const limit = query.limit ?? 20;
   return {
-    data,
+    items: data,
     meta: {
       itemsPerPage: limit,
       totalItems: total,

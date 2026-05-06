@@ -26,7 +26,7 @@ export class UpdateUserDto {
 }
 
 export class PaginatedUsers {
-  data: User[];
+  items: User[];
 
   meta: PaginationMeta;
 }
