@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 import { User } from './user/user.entity';
 import { Agent } from './agent/agent.entity';
 import { AgentStatusReviewHistory } from './agent/agent-status-review-history.entity';
+import { AgentTypeLookup } from './agent-type/agent-type.entity';
 import { LicensingInfo } from './licensing-info/licensing-info.entity';
 import { AgentDocument } from './agent-document/agent-document.entity';
 import { Referral } from './referral/referral.entity';
@@ -10,6 +11,9 @@ import { CustomNamingStrategy } from './common/helpers/CustomNamingStrategy';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { AgentPoc } from './agent-poc/agent-poc.entity';
 import { AgentConfiguration } from './agent-configuration/agent-configuration.entity';
+import { Campaign } from './campaign/campaign.entity';
+import { CampaignAgent } from './campaign/campaign-agent.entity';
+import { CampaignAgentTypeRate } from './campaign/campaign-agent-type-rate.entity';
 import { Wallet } from './wallet/wallet.entity';
 import { Payment } from './payment/payment.entity';
 import { Transaction } from './transaction/transaction.entity';
@@ -19,8 +23,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 
-const IS_NOT_PRODUCTION_DB = process.env.DB_HOST == '127.0.0.1'
-// console.log('Using database', process.env.DB_NAME, process.env.NODE_ENV, IS_NOT_PRODUCTION_DB);
+// console.log('Using database', process.env.DB_NAME, process.env.NODE_ENV);
 
 export const options: DataSourceOptions = {
     type: 'mysql',
@@ -33,18 +36,23 @@ export const options: DataSourceOptions = {
         User,
         Agent,
         AgentStatusReviewHistory,
+        AgentTypeLookup,
         LicensingInfo,
         AgentDocument,
         Referral,
         Commission,
         AgentPoc,
         AgentConfiguration,
+        Campaign,
+        CampaignAgent,
+        CampaignAgentTypeRate,
         Wallet,
         Payment,
         Transaction,
     ],
-    dropSchema: process.env.NODE_ENV?.includes("test") && IS_NOT_PRODUCTION_DB,
-    synchronize: IS_NOT_PRODUCTION_DB,
+    dropSchema: false,
+    synchronize: false,
+    migrationsRun: true,
     namingStrategy: new CustomNamingStrategy(),
     migrations: [__dirname + '/../migrations/*{.ts,.js}'],
     // Connection pooling and optimization settings

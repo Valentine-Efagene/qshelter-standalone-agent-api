@@ -53,6 +53,8 @@ import { WalletModule } from './wallet/wallet.module';
 import { PaymentModule } from './payment/payment.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { CampaignModule } from './campaign/campaign.module';
+import { AgentTypeModule } from './agent-type/agent-type.module';
 
 @Module({
   imports: [
@@ -68,6 +70,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
     AgentPocModule,
     CaslModule,
     AgentConfigurationModule,
+    AgentTypeModule,
+    CampaignModule,
     WalletModule,
     PaymentModule,
     TransactionModule,

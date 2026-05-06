@@ -7,6 +7,7 @@ import { AgentCommissionPaginationDto, CommissionPaginationDto, CreateCommission
 import { Commission } from './commission.entity';
 import { Paginated, PaginationDto, buildPaginatedResult } from '../common/common.dto';
 import { Referral } from '../referral/referral.entity';
+import { CampaignService } from '../campaign/campaign.service';
 
 // https://www.npmjs.com/package/nestjs-paginate
 @Injectable()
@@ -20,6 +21,7 @@ export class CommissionService {
 
     private readonly configService: ConfigService,
     private readonly agentConfigurationService: AgentConfigurationService,
+    private readonly campaignService: CampaignService,
   ) { }
 
   async create(createCommissionDto: CreateCommissionDto): Promise<Commission> {
@@ -43,6 +45,7 @@ export class CommissionService {
       .where('agent.referralCode = :referralCode', { referralCode })
       .andWhere('user.id = :userId', { userId })
       .select('referral.id', 'id')
+      .addSelect('agent.id', 'agentId')
       .addSelect('agent.agentType', 'agentType')
       .getRawOne();
 
@@ -51,15 +54,30 @@ export class CommissionService {
     }
 
     let commissionRate = Number(this.configService.get('COMMISSION_RATE') ?? 0.05);
+    let campaignId: number | undefined;
+
+    const activeCampaignRate = await this.campaignService.findApplicableCampaignForAgent(
+      Number(referral.agentId),
+      referral.agentType,
+    );
+
+    if (activeCampaignRate) {
+      commissionRate = Number(activeCampaignRate.commissionRate);
+      campaignId = activeCampaignRate.campaignId;
+    }
+
     try {
-      const config = await this.agentConfigurationService.findByAgentType(referral.agentType);
-      commissionRate = Number(config.commissionRate);
+      if (!activeCampaignRate) {
+        const config = await this.agentConfigurationService.findByAgentType(referral.agentType);
+        commissionRate = Number(config.commissionRate);
+      }
     } catch {
       // fall back to env if no DB config seeded yet
     }
 
     const entity = this.commissionRepository.create({
       referral: { id: referral.id },
+      ...(campaignId ? { campaign: { id: campaignId } } : {}),
       amount: amount * commissionRate,
     });
 

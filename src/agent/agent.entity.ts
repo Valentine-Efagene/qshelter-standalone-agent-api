@@ -9,6 +9,7 @@ import { AbstractBaseReviewableEntity } from '../common/common.entity';
 import { AgentPoc } from '../agent-poc/agent-poc.entity';
 import { User } from '../user/user.entity';
 import { AgentStatusReviewHistory } from './agent-status-review-history.entity';
+import { CampaignAgent } from '../campaign/campaign-agent.entity';
 
 @Entity({ name: 'agents' })
 export class Agent extends AbstractBaseReviewableEntity {
@@ -58,6 +59,9 @@ export class Agent extends AbstractBaseReviewableEntity {
 
   @OneToMany(() => AgentStatusReviewHistory, (history) => history.agent)
   reviewHistory: AgentStatusReviewHistory[];
+
+  @OneToMany(() => CampaignAgent, (assignment) => assignment.agent)
+  campaignAssignments: CampaignAgent[];
 
   @Column()
   title: string;
