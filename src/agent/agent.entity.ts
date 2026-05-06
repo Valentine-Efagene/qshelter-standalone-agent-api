@@ -127,7 +127,4 @@ export class Agent extends AbstractBaseReviewableEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   termsAcceptedAt: Date;
-
-  @Column({ nullable: true })
-  comment: string;
 }

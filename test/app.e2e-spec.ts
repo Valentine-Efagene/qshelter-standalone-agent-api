@@ -339,7 +339,6 @@ describe('Agent Onboarding Story (e2e)', () => {
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(res.body.data.status).toBe(AgentStatus.REJECTED);
-                expect(res.body.data.comment).toBe('Missing mandatory details');
             });
 
         updateAgentStatusDto = {
@@ -354,7 +353,6 @@ describe('Agent Onboarding Story (e2e)', () => {
             .expect(HttpStatus.OK)
             .expect((res) => {
                 expect(res.body.data.status).toBe(AgentStatus.APPROVED);
-                expect(res.body.data.comment).toBeFalsy();
             });
     }, 20000);
 

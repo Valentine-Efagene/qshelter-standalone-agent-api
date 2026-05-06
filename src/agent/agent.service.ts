@@ -296,7 +296,7 @@ export class AgentService {
       await this.validateApprovalReadiness(agent.id, agent.agentType);
     }
 
-    const { reviewerId, ...rest } = updateDto;
+    const { reviewerId, comment, status } = updateDto;
     const previousStatus = agent.status;
     const reviewedAt = new Date().toISOString();
 
@@ -305,7 +305,7 @@ export class AgentService {
       const txHistoryRepo = manager.getRepository(AgentStatusReviewHistory);
 
       txAgentRepo.merge(agent, {
-        ...rest,
+        status,
         reviewer: { id: reviewerId },
         reviewedAt,
       });
@@ -316,8 +316,8 @@ export class AgentService {
         agentId: savedAgent.id,
         reviewerId,
         fromStatus: previousStatus,
-        toStatus: updateDto.status,
-        comment: updateDto.comment ?? null,
+        toStatus: status,
+        comment: comment ?? null,
         reviewedAt,
       });
 
