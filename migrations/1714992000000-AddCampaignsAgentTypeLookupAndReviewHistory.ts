@@ -27,21 +27,6 @@ export class AddCampaignsAgentTypeLookupAndReviewHistory1714992000000 implements
             );
         }
 
-        await queryRunner.query(`
-      INSERT INTO agent_types (code, name, is_active, created_at, updated_at)
-      SELECT 'QSHELTER_LICENSED', 'QShelter Licensed', 1, NOW(), NOW()
-      WHERE NOT EXISTS (
-        SELECT 1 FROM agent_types WHERE code = 'QSHELTER_LICENSED'
-      )
-    `);
-
-        await queryRunner.query(`
-      INSERT INTO agent_types (code, name, is_active, created_at, updated_at)
-      SELECT 'ELITE_PARTNER', 'Elite Partner', 1, NOW(), NOW()
-      WHERE NOT EXISTS (
-        SELECT 1 FROM agent_types WHERE code = 'ELITE_PARTNER'
-      )
-    `);
 
         const hasCampaignsTable = await queryRunner.hasTable('campaigns');
         if (!hasCampaignsTable) {
@@ -296,7 +281,6 @@ export class AddCampaignsAgentTypeLookupAndReviewHistory1714992000000 implements
         }
 
         if (await queryRunner.hasTable('agent_types')) {
-            await queryRunner.query(`DELETE FROM agent_types WHERE code IN ('QSHELTER_LICENSED', 'ELITE_PARTNER')`);
             await queryRunner.dropTable('agent_types');
         }
     }
