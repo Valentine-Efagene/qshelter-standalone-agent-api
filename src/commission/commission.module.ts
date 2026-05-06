@@ -5,9 +5,10 @@ import { CommissionService } from './commission.service';
 import { CommissionController } from './commission.controller';
 import { Referral } from '../referral/referral.entity';
 import { AgentConfigurationModule } from '../agent-configuration/agent-configuration.module';
+import { CaslModule } from '../common/casl/casl.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Commission, Referral]), AgentConfigurationModule],
+  imports: [TypeOrmModule.forFeature([Commission, Referral]), AgentConfigurationModule, CaslModule],
   providers: [CommissionService],
   controllers: [CommissionController],
   exports: [CommissionService]

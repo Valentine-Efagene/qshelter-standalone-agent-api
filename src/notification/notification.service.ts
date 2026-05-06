@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { AxiosError } from 'axios';
 import { catchError, firstValueFrom } from 'rxjs';
 import { Request } from 'express';
-import { RequestHelper } from '@qshelter/nest-auth';
+import { AuthHelper } from '../common/auth/auth.helper';
 import { AgentApprovedRegistrationDto, AgentDeclinedRegistrationDto, AgentOnboardingCompletedDto, INotificationResponse } from './notification.dto';
 import EnvironmentHelper from '../common/helpers/EnvironmentHelper';
 import { HttpService } from '@nestjs/axios';
@@ -29,7 +29,7 @@ export class NotificationService {
     const { data } = await firstValueFrom(
       this.httpService.post(endpoint, emailDto, {
         headers: {
-          'Authorization': RequestHelper.getAuthorizationHeader(request)
+          Authorization: AuthHelper.getAuthorizationHeader(request),
         }
       })
         .pipe(catchError((error: AxiosError) => {

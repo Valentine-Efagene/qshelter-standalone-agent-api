@@ -11,14 +11,14 @@ import {
 import { User } from './user.entity';
 import { UserService } from './user.service';
 import { CreateUserDto, UserPaginationDto } from './user.dto';
-import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
-import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
+import { AuthGuard } from '../common/auth/auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginated } from '../common/common.dto';
 
-@SwaggerAuth()
+@AuthGuard()
 @Controller('users')
 @ApiTags('User')
 @ApiResponse(OpenApiHelper.responseDoc)
@@ -34,7 +34,6 @@ export class UserController {
   }
 
   // @Get()
-  // @ApiHeader(OpenApiHelper.userIdHeader)
   // @ApiResponse(OpenApiHelper.arrayResponseDoc)
   // async findAll(): Promise<ApiResult<User[]>> {
   //   const data = await this.userService.findAll();
@@ -42,7 +41,6 @@ export class UserController {
   // }
 
   @Get('paginate')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Query() query: UserPaginationDto,
@@ -52,7 +50,6 @@ export class UserController {
   }
 
   @Get(':id')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async findOne(
     @Param('id', ParseIntPipe) id: number,
@@ -62,7 +59,6 @@ export class UserController {
   }
 
   // @Delete(':id')
-  // @ApiHeader(OpenApiHelper.userIdHeader)
   // //@Roles([UserRole.ADMIN])
   // @ApiOperation({ summary: '', tags: ['Admin'] })
   // @ApiResponse(OpenApiHelper.nullResponseDoc)

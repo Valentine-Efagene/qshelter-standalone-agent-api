@@ -7,9 +7,10 @@ import { CommissionModule } from '../commission/commission.module';
 import { UserModule } from '../user/user.module';
 import { AgentDocumentModule } from '../agent-document/agent-document.module';
 import { NotificationModule } from '../notification/notification.module';
+import { CaslModule } from '../common/casl/casl.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Agent]), CommissionModule, UserModule, AgentDocumentModule, NotificationModule],
+  imports: [TypeOrmModule.forFeature([Agent]), CommissionModule, UserModule, AgentDocumentModule, NotificationModule, CaslModule],
   providers: [AgentService],
   controllers: [AgentController],
 })

@@ -13,6 +13,7 @@ import { Referral } from '../../referral/referral.entity';
 import { LicensingInfo } from '../../licensing-info/licensing-info.entity';
 import { AgentDocument } from '../../agent-document/agent-document.entity';
 import { UserRole } from '../../user/user.enums';
+import { IRequestUser } from '../auth/auth.interface';
 
 export enum Action {
     Manage = 'manage',
@@ -35,12 +36,14 @@ export type AppAbility = MongoAbility<[Action, Subjects]>;
 
 @Injectable()
 export class CaslAbilityFactory {
-    createForUser(user: User): AppAbility {
+    createForUser(user: User | IRequestUser): AppAbility {
         const { can, build } = new AbilityBuilder<AppAbility>(
             createMongoAbility,
         );
 
         const roles = user.roles ?? [];
+        // Extract user ID: IRequestUser has 'id', User also has 'id'
+        const userId = (user as any).id ?? (user as any).user_id ?? 0;
 
         if (roles.includes(UserRole.SUPER_ADMIN) || roles.includes(UserRole.ADMIN)) {
             can(Action.Manage, 'all');
@@ -53,24 +56,24 @@ export class CaslAbilityFactory {
 
         if (roles.includes(UserRole.AGENT)) {
             // Agents read/update their own User and Agent profile
-            can(Action.Read, User, { id: user.id });
-            can(Action.Update, User, { id: user.id });
-            can(Action.Read, Agent, { userId: user.id });
-            can(Action.Update, Agent, { userId: user.id });
+            can(Action.Read, User, { id: userId });
+            can(Action.Update, User, { id: userId });
+            can(Action.Read, Agent, { userId });
+            can(Action.Update, Agent, { userId });
             // Agents manage their own licensing info and documents
-            can(Action.Read, LicensingInfo, { agentId: user.id });
-            can(Action.Create, LicensingInfo, { agentId: user.id });
+            can(Action.Read, LicensingInfo, { agentId: userId });
+            can(Action.Create, LicensingInfo, { agentId: userId });
             can(Action.Read, AgentDocument);
             can(Action.Create, AgentDocument);
             // Agents read their own referrals and commissions
-            can(Action.Read, Referral, { referrerId: user.id });
-            can(Action.Create, Referral, { referrerId: user.id });
+            can(Action.Read, Referral, { referrerId: userId });
+            can(Action.Create, Referral, { referrerId: userId });
             can(Action.Read, Commission);
         }
 
         if (roles.includes(UserRole.USER)) {
-            can(Action.Read, User, { id: user.id });
-            can(Action.Update, User, { id: user.id });
+            can(Action.Read, User, { id: userId });
+            can(Action.Update, User, { id: userId });
         }
 
         return build({

@@ -11,15 +11,15 @@ import {
 import { Referral } from './referral.entity';
 import { ReferralService } from './referral.service';
 import { CreateReferralDto, ReferralPaginationDto } from './referral.dto';
-import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
-import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
+import { AuthGuard } from '../common/auth/auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginated } from '../common/common.dto';
 import { User } from '../user/user.entity';
 
-@SwaggerAuth()
+@AuthGuard()
 @Controller('referrals')
 @ApiTags('Referral')
 @ApiResponse(OpenApiHelper.responseDoc)
@@ -35,7 +35,6 @@ export class ReferralController {
   }
 
   @Get('paginate')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Query() query: ReferralPaginationDto,
@@ -45,7 +44,6 @@ export class ReferralController {
   }
 
   // @Get('by-agent/:id/paginate')
-  // @ApiHeader(OpenApiHelper.userIdHeader)
   // @ApiResponse(OpenApiHelper.arrayResponseDoc)
   // async findAllByAgentPaginated(
   //   @Param('id', ParseIntPipe) id: number,
@@ -60,7 +58,6 @@ export class ReferralController {
   // }
 
   @Get('by-agent/:id/referrees')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllByAgent(
     @Param('id', ParseIntPipe) id: number,
@@ -70,7 +67,6 @@ export class ReferralController {
   }
 
   @Get(':id')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async findOne(
     @Param('id', ParseIntPipe) id: number,

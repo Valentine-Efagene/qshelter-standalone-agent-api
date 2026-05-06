@@ -13,15 +13,14 @@ import { CreateAgentPocDto, UpdateAgentPocDto } from './agent-poc.dto';
 import { AgentPoc } from './agent-poc.entity';
 import { AgentPocService } from './agent-poc.service';
 import OpenApiHelper from '../common/OpenApiHelper';
-import { ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiResult, okResponse } from '../common/common.dto';
 import { ResponseMessage } from '../common/common.enum';
-import { SwaggerAuth } from '@qshelter/nest-auth';
+import { AuthGuard } from '../common/auth/auth.guard';
 
-@SwaggerAuth()
+@AuthGuard()
 @Controller('agent-pocs')
 @ApiTags('Agent Point of Contact')
-@ApiHeader(OpenApiHelper.userIdHeader)
 @ApiResponse(OpenApiHelper.responseDoc)
 export class AgentPocController {
   constructor(

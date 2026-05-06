@@ -28,12 +28,6 @@ const envModule = ConfigModule.forRoot({
     AWS_S3_ACCESS_KEY_ID: Joi.string(),
     AWS_S3_SECRET_ACCESS_KEY: Joi.string(),
     AWS_S3_REGION: Joi.string(),
-
-    // COMMISSION
-    COMMISSION_RATE: Joi.number().min(0).max(1).default(0.05),
-
-    // QUEUE
-    REDIS_PORT: Joi.number().port().default(6379),
   }),
   envFilePath: '.env',
   isGlobal: true,

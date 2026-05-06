@@ -14,15 +14,15 @@ import {
 import { Commission } from './commission.entity';
 import { CommissionService } from './commission.service';
 import { CommissionPaginationDto, PostCommissionWithCodeDto, UpdateCommissionDto } from './commission.dto';
-import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ErrorMessage, ResponseMessage } from '../common/common.enum';
-import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
+import { AuthGuard } from '../common/auth/auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginated } from '../common/common.dto';
 import { CommissionStatus } from './commission.enums';
 
-@SwaggerAuth()
+@AuthGuard()
 @Controller('commissions')
 @ApiTags('Commission')
 @ApiResponse(OpenApiHelper.responseDoc)
@@ -50,7 +50,6 @@ export class CommissionController {
   }
 
   // @Get()
-  // @ApiHeader(OpenApiHelper.userIdHeader)
   // @ApiResponse(OpenApiHelper.arrayResponseDoc)
   // async findAll(): Promise<ApiResult<Commission[]>> {
   //   const data = await this.commissionService.findAll();
@@ -58,7 +57,6 @@ export class CommissionController {
   // }
 
   @Get('paginate')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Query() query: CommissionPaginationDto,
@@ -68,7 +66,6 @@ export class CommissionController {
   }
 
   @Get(':id')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async findOne(
     @Param('id', ParseIntPipe) id: number,
@@ -78,7 +75,6 @@ export class CommissionController {
   }
 
   @Patch(':id')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async updateOne(
     @Param('id', ParseIntPipe) id: number,
@@ -97,7 +93,6 @@ export class CommissionController {
   }
 
   @Delete(':id')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   //@Roles([CommissionRole.ADMIN])
   @ApiOperation({ summary: '', tags: ['Admin'] })
   @ApiResponse(OpenApiHelper.nullResponseDoc)

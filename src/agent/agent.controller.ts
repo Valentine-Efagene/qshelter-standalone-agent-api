@@ -16,9 +16,9 @@ import {
 import { Agent } from './agent.entity';
 import { AgentService } from './agent.service';
 import { AgentPaginationDto, CreateAgentDto, ReferreePaginationDto, UpdateAgentDto, UpdateAgentStatusDto } from './agent.dto';
-import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
-import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
+import { AuthGuard } from '../common/auth/auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse, Paginated } from '../common/common.dto';
 import { PaginatedUsers } from '../user/user.dto';
@@ -27,7 +27,7 @@ import { AgentDocument } from '../agent-document/agent-document.entity';
 import { AgentIdValidationPipe } from '../common/pipes/agent-id-validation.pipe';
 import { Request } from 'express';
 
-@SwaggerAuth()
+@AuthGuard()
 @Controller('agents')
 @ApiTags('Agent')
 @ApiResponse(OpenApiHelper.responseDoc)
@@ -35,7 +35,6 @@ export class AgentController {
   constructor(private readonly agentService: AgentService) { }
 
   @Post()
-  @ApiHeader(OpenApiHelper.userIdHeader)
   async create(
     @Body() createAgentDto: CreateAgentDto,
     @Req() request: Request,
@@ -45,7 +44,6 @@ export class AgentController {
   }
 
   // @Get()
-  // @ApiHeader(OpenApiHelper.userIdHeader)
   // @ApiResponse(OpenApiHelper.arrayResponseDoc)
   // async findAll(): Promise<ApiResult<Agent[]>> {
   //   const data = await this.agentService.findAll();
@@ -53,7 +51,6 @@ export class AgentController {
   // }
 
   @Get('paginate')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Query() query: AgentPaginationDto,
@@ -63,7 +60,6 @@ export class AgentController {
   }
 
   @Get(':id/referrees')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async getReferrees(
     @Param('id', AgentIdValidationPipe) id: number,
@@ -74,7 +70,6 @@ export class AgentController {
   }
 
   @Get(':id/agent-documents')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async findAllAgentDocuments(
     @Param('id', ParseIntPipe) id: number,
@@ -84,7 +79,6 @@ export class AgentController {
   }
 
   @Get(':id/commissions')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async getCommissions(
     @Param('id', ParseIntPipe) id: number,
@@ -95,7 +89,6 @@ export class AgentController {
   }
 
   @Get(':id/total-commission')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async getTotalCommission(
     @Param('id', ParseIntPipe) id: number,
@@ -105,7 +98,6 @@ export class AgentController {
   }
 
   @Get(':id')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async findOne(
     @Param('id', ParseIntPipe) id: number,
@@ -113,9 +105,6 @@ export class AgentController {
     const data = await this.agentService.findOne(id);
     return okResponse(data, ResponseMessage.FETCHED);
   }
-
-
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @Get('by-referral-code/:code')
   async findOneByReferralCode(
     @Param('code') code: string,
@@ -123,8 +112,6 @@ export class AgentController {
     const data = await this.agentService.findOneByReferralCode(code);
     return okResponse(data, ResponseMessage.FETCHED);
   }
-
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @Get('by-user/:id')
   async findOneByUser(
     @Param('id', ParseIntPipe) id: number,
@@ -153,7 +140,6 @@ export class AgentController {
   }
 
   @Patch(':id')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.responseDoc)
   async updateOne(
     @Param('id', ParseIntPipe) id: number,
@@ -164,7 +150,6 @@ export class AgentController {
   }
 
   // @Delete(':id')
-  // @ApiHeader(OpenApiHelper.userIdHeader)
   // //@Roles([AgentRole.ADMIN])
   // @ApiOperation({ summary: '', tags: ['Admin'] })
   // @ApiResponse(OpenApiHelper.nullResponseDoc)

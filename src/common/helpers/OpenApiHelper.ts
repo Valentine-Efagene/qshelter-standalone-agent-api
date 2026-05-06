@@ -1,13 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiHeaderOptions, ApiQuery, ApiResponseOptions } from '@nestjs/swagger';
+import { ApiQuery, ApiResponseOptions } from '@nestjs/swagger';
 
 export default class OpenApiHelper {
-  public static userIdHeader: ApiHeaderOptions = {
-    name: 'user_id',
-    description: "Requesting user's ID",
-    required: true,
-    example: '1',
-  };
 
   public static responseDoc: ApiResponseOptions = {
     status: 200,

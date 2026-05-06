@@ -18,17 +18,16 @@ import {
   UpdateLicensingInfoDto,
 } from './licensing-info.dto';
 import {
-  ApiHeader,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ResponseMessage } from '../common/common.enum';
-import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
+import { AuthGuard } from '../common/auth/auth.guard';
 import OpenApiHelper from '../common/helpers/OpenApiHelper';
 import { ApiResult, okResponse, Paginated } from '../common/common.dto';
 
-@SwaggerAuth()
+@AuthGuard()
 @Controller('licensing-infos')
 @ApiTags('Licensing Infos')
 @ApiResponse(OpenApiHelper.responseDoc)
@@ -52,7 +51,6 @@ export class LicensingInfoController {
   }
 
   @Get('paginate')
-  @ApiHeader(OpenApiHelper.userIdHeader)
   @ApiResponse(OpenApiHelper.arrayResponseDoc)
   async findAllPaginated(
     @Query() query: LicensingInfoPaginationDto,

@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import OpenApiHelper from '../common/OpenApiHelper';
 import {
-    ApiHeader,
     ApiOperation,
     ApiResponse,
     ApiTags,
@@ -25,16 +24,15 @@ import {
     UpdateDocumentStatusDto,
 } from '../common/common.dto';
 import { ResponseMessage } from '../common/common.enum';
-import { SwaggerAuth } from '../common/guard/swagger-auth.guard';
+import { AuthGuard } from '../common/auth/auth.guard';
 import { AgentDocumentService } from './agent-document.service';
 import { CreateAgentDocumentDto, UpdateAgentDocumentDto } from './agent-document.dto';
 import { AgentDocument } from './agent-document.entity';
 import { S3UploaderService } from '../s3-uploader/s3-uploader.service';
 
-@SwaggerAuth()
+@AuthGuard()
 @Controller('agent-documents')
 @ApiTags('Agent Documents')
-@ApiHeader(OpenApiHelper.userIdHeader)
 @ApiResponse(OpenApiHelper.responseDoc)
 export class AgentDocumentController {
     constructor(

@@ -8,16 +8,15 @@ import {
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { AgentApprovedRegistrationDto } from './notification.dto';
-import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import OpenApiHelper from '../common/OpenApiHelper';
-import { SwaggerAuth } from '@qshelter/nest-auth';
+import { AuthGuard } from '../common/auth/auth.guard';
 import { ApiResult, okResponse } from '../common/common.dto';
 import { Request } from 'express';
 
-@SwaggerAuth()
+@AuthGuard()
 @Controller('notifications')
 @ApiTags('Notification')
-@ApiHeader(OpenApiHelper.userIdHeader)
 @ApiResponse(OpenApiHelper.responseDoc)
 export class PropertyController {
   constructor(
