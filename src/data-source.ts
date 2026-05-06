@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 import { User } from './user/user.entity';
 import { Agent } from './agent/agent.entity';
+import { AgentStatusReviewHistory } from './agent/agent-status-review-history.entity';
 import { LicensingInfo } from './licensing-info/licensing-info.entity';
 import { AgentDocument } from './agent-document/agent-document.entity';
 import { Referral } from './referral/referral.entity';
@@ -31,6 +32,7 @@ export const options: DataSourceOptions = {
     entities: [
         User,
         Agent,
+        AgentStatusReviewHistory,
         LicensingInfo,
         AgentDocument,
         Referral,

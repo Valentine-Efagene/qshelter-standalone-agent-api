@@ -8,6 +8,13 @@ export enum AgentType {
   ELITE_PARTNER = 'ELITE_PARTNER',
 }
 
+export enum AgentIdType {
+  DRIVERS_LICENSE = 'DRIVERS_LICENSE',
+  VOTERS_CARD = 'VOTERS_CARD',
+  NIN = 'NIN',
+  INTERNATIONAL_PASSPORT = 'INTERNATIONAL_PASSPORT',
+}
+
 /**
  * Onboarding lifecycle stages, in progression order.
  * - BASIC_INFO: Agent record created with basic profile data

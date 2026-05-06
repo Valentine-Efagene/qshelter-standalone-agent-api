@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AgentStatus, AgentType } from './agent.enums';
-import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { AgentIdType, AgentStatus, AgentType } from './agent.enums';
+import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsUrl, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Agent } from './agent.entity';
 import { PaginationDto, PaginationMeta } from '../common/common.dto';
@@ -100,6 +100,28 @@ export class CreateAgentDto {
   @IsOptional()
   @MaxLength(255)
   accountNumber?: string;
+
+  @ApiPropertyOptional({
+    enum: AgentIdType,
+    example: AgentIdType.NIN,
+  })
+  @IsOptional()
+  @IsEnum(AgentIdType)
+  idType?: AgentIdType;
+
+  @ApiPropertyOptional({
+    example: 'https://example.com/documents/nin.png',
+  })
+  @IsOptional()
+  @IsUrl({ require_protocol: true })
+  idDocument?: string;
+
+  @ApiPropertyOptional({
+    example: '12345678901',
+  })
+  @IsOptional()
+  @MaxLength(255)
+  idNumber?: string;
 
   @ApiProperty({
     example: 'Nigeria',
@@ -247,6 +269,28 @@ export class UpdateAgentDto {
   @IsOptional()
   @MaxLength(255)
   accountNumber: string;
+
+  @ApiPropertyOptional({
+    enum: AgentIdType,
+    example: AgentIdType.NIN,
+  })
+  @IsOptional()
+  @IsEnum(AgentIdType)
+  idType?: AgentIdType;
+
+  @ApiPropertyOptional({
+    example: 'https://example.com/documents/nin.png',
+  })
+  @IsOptional()
+  @IsUrl({ require_protocol: true })
+  idDocument?: string;
+
+  @ApiPropertyOptional({
+    example: '12345678901',
+  })
+  @IsOptional()
+  @MaxLength(255)
+  idNumber?: string;
 
   @ApiPropertyOptional({
     example: 'Nigeria',

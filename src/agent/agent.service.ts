@@ -16,7 +16,6 @@ import { AgentCommissionPaginationDto, PaginatedAgentCommissions } from '../comm
 import { AgentDocumentService } from '../agent-document/agent-document.service';
 import {
   AgentStatus,
-  ADMIN_ONLY_STATUSES,
   TERMINAL_STATUSES,
   AgentType,
 } from './agent.enums';
@@ -29,6 +28,7 @@ import EnvironmentHelper from '../common/helpers/EnvironmentHelper';
 import { Request } from 'express';
 import { AgentPoc } from '../agent-poc/agent-poc.entity';
 import { LicensingRegulatoryBody } from '../licensing-info/licensing-info.enums';
+import { AgentStatusReviewHistory } from './agent-status-review-history.entity';
 
 // https://www.npmjs.com/package/nestjs-paginate
 @Injectable()
@@ -297,14 +297,34 @@ export class AgentService {
     }
 
     const { reviewerId, ...rest } = updateDto;
+    const previousStatus = agent.status;
+    const reviewedAt = new Date().toISOString();
 
-    this.agentRepository.merge(agent, {
-      ...rest,
-      reviewer: { id: reviewerId },
-      reviewedAt: new Date().toISOString(),
+    const res = await this.dataSource.transaction(async (manager) => {
+      const txAgentRepo = manager.getRepository(Agent);
+      const txHistoryRepo = manager.getRepository(AgentStatusReviewHistory);
+
+      txAgentRepo.merge(agent, {
+        ...rest,
+        reviewer: { id: reviewerId },
+        reviewedAt,
+      });
+
+      const savedAgent = await txAgentRepo.save(agent);
+
+      const reviewHistory = txHistoryRepo.create({
+        agentId: savedAgent.id,
+        reviewerId,
+        fromStatus: previousStatus,
+        toStatus: updateDto.status,
+        comment: updateDto.comment ?? null,
+        reviewedAt,
+      });
+
+      await txHistoryRepo.save(reviewHistory);
+
+      return savedAgent;
     });
-
-    const res = await this.agentRepository.save(agent);
 
     const emailDto: AgentApprovedRegistrationDto = {
       firstName: agent.user.firstName,

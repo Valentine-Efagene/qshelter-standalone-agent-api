@@ -1,5 +1,5 @@
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
-import { AgentStatus, AgentType } from './agent.enums';
+import { AgentIdType, AgentStatus, AgentType } from './agent.enums';
 import { LicensingInfo } from '../licensing-info/licensing-info.entity';
 import { Referral } from '../referral/referral.entity';
 import { CreateAgentDto } from './agent.dto';
@@ -8,6 +8,7 @@ import { Type } from 'class-transformer';
 import { AbstractBaseReviewableEntity } from '../common/common.entity';
 import { AgentPoc } from '../agent-poc/agent-poc.entity';
 import { User } from '../user/user.entity';
+import { AgentStatusReviewHistory } from './agent-status-review-history.entity';
 
 @Entity({ name: 'agents' })
 export class Agent extends AbstractBaseReviewableEntity {
@@ -55,6 +56,9 @@ export class Agent extends AbstractBaseReviewableEntity {
   @OneToMany(() => Referral, (referral) => referral.referrer)
   referrals: Referral[];
 
+  @OneToMany(() => AgentStatusReviewHistory, (history) => history.agent)
+  reviewHistory: AgentStatusReviewHistory[];
+
   @Column()
   title: string;
 
@@ -67,11 +71,6 @@ export class Agent extends AbstractBaseReviewableEntity {
     nullable: true
   })
   phone: string;
-
-  @Column({
-    nullable: true
-  })
-  phone2: string;
 
   @Column({
     nullable: true
@@ -101,27 +100,20 @@ export class Agent extends AbstractBaseReviewableEntity {
   @Column({
     nullable: true
   })
-  accountName: string;
-
-  @Column({
-    nullable: true
-  })
   accountNumber: string;
 
   @Column({
-    nullable: true
+    type: 'enum',
+    enum: AgentIdType,
+    nullable: true,
   })
-  countryOfResidence: string;
+  idType?: AgentIdType;
 
-  @Column({
-    nullable: true
-  })
-  state: string;
+  @Column({ nullable: true })
+  idDocument?: string;
 
-  @Column({
-    nullable: true
-  })
-  city: string;
+  @Column({ nullable: true })
+  idNumber?: string;
 
   @Column({
     type: 'enum',

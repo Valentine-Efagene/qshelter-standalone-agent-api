@@ -107,3 +107,10 @@ Defined in `src/common/casl/casl-ability.factory.ts`. Subjects: `User`, `Agent`,
 | `FINANCE_ADMIN`, `SALES_ADMIN` | `read all` — read-only across all resources                                                                                     |
 | `AGENT`                        | Read/update own `User` and `Agent` profile; create/read own `LicensingInfo`, `AgentDocument`, `Referral`; read own `Commission` |
 | `USER`                         | Read/update own `User` profile only                                                                                             |
+
+## Notes
+
+- Auditability should be a priority: all critical operations (status changes, commission calculations, referral link usage) should be logged with sufficient context to reconstruct events for debugging and compliance.
+- Error handling should be consistent: use NestJS exceptions (`BadRequestException`, `NotFoundException`, etc.) with clear messages to facilitate debugging and provide meaningful feedback to API consumers.
+- Validation should be comprehensive: all DTOs should have appropriate `class-validator` decorators to enforce data integrity and prevent invalid data from reaching the service layer.
+- Consider future extensibility: while the current scope is defined, design services and modules in a way that allows for easy addition of new features (e.g., new agent types, additional metrics) without requiring major refactoring.
