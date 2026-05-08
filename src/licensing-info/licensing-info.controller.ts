@@ -50,8 +50,8 @@ export class LicensingInfoController {
     return okResponse(data, ResponseMessage.CREATED);
   }
 
-  @Get('paginate')
-  @ApiResponse(OpenApiHelper.arrayResponseDoc)
+  @Get()
+  @ApiResponse(OpenApiHelper.paginatedResponseDoc)
   async findAllPaginated(
     @Query() query: LicensingInfoPaginationDto,
   ): Promise<ApiResult<Paginated<LicensingInfo>>> {

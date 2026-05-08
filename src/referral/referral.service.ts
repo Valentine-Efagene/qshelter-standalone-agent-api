@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateReferralDto, PaginatedReferrals, ReferralPaginationDto } from './referral.dto';
@@ -6,16 +6,32 @@ import { Referral } from './referral.entity';
 import { UpdateReferralDto } from './referral.dto';
 import { Paginated, PaginationArgs, buildPaginatedResult } from '../common/common.dto';
 import { User } from '../user/user.entity';
+import { Request } from 'express';
+import { NotificationService } from '../notification/notification.service';
+import { AgentCustomerStartedApplicationDto } from '../notification/notification.dto';
+import { App } from '../notification/notification.enums';
+import TypeHelper from '../common/helpers/TypeHelper';
+import { Agent } from '../agent/agent.entity';
 
 // https://www.npmjs.com/package/nestjs-paginate
 @Injectable()
 export class ReferralService {
+  private readonly logger = new Logger(ReferralService.name);
+  private readonly app: App;
+
   constructor(
     @InjectRepository(Referral)
     private readonly referralRepository: Repository<Referral>,
-  ) { }
+    @InjectRepository(Agent)
+    private readonly agentRepository: Repository<Agent>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly notificationService: NotificationService,
+  ) {
+    this.app = TypeHelper.toEnum(App, process.env.APP)
+  }
 
-  async create(createReferralDto: CreateReferralDto): Promise<Referral> {
+  async create(createReferralDto: CreateReferralDto, request: Request): Promise<Referral> {
     const { referreeId, referrerId, ...rest } = createReferralDto;
 
     const entity = this.referralRepository.create({
@@ -24,7 +40,30 @@ export class ReferralService {
       ...rest,
     });
 
-    return this.referralRepository.save(entity);
+    const savedReferral = await this.referralRepository.save(entity);
+
+    try {
+      const agent = await this.agentRepository.findOne({
+        where: { id: referrerId },
+        relations: ['user'],
+      });
+      const referree = await this.userRepository.findOneBy({ id: referreeId });
+
+      if (agent?.user?.email) {
+        const dto: AgentCustomerStartedApplicationDto = {
+          agentName: agent.name,
+          app: this.app,
+          to_email: agent.user.email,
+        };
+        await this.notificationService.sendAgentCustomerStartedApplication(dto, request);
+      }
+
+      void referree;
+    } catch (error) {
+      this.logger.error('Error sending customer started application notification:', error);
+    }
+
+    return savedReferral;
   }
 
   async findAll(): Promise<Referral[]> {

@@ -12,6 +12,24 @@ export abstract class AbstractBaseReviewableEntity extends AbstractBaseEntity {
   reviewedAt: string;
 }
 
+export abstract class AbstractBaseReviewHistoryEntity extends AbstractBaseEntity {
+  @ManyToOne(() => User, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
+  @JoinColumn({ name: 'reviewer_id' })
+  reviewer: User;
+
+  @Column()
+  reviewerId: number;
+
+  @Column({ nullable: true, type: 'text' })
+  comment: string | null;
+
+  @Column({ type: 'timestamp' })
+  reviewedAt: string;
+}
+
 export abstract class AbstractBaseDocumentEntity extends AbstractBaseReviewableEntity {
   @Column({
     type: 'enum',

@@ -10,6 +10,7 @@ import {
   BadRequestException,
   Delete,
   Query,
+  Req,
 } from '@nestjs/common';
 import { Commission } from './commission.entity';
 import { CommissionService } from './commission.service';
@@ -21,6 +22,7 @@ import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginated } from '../common/common.dto';
 import { CommissionStatus } from './commission.enums';
+import { Request } from 'express';
 
 @AuthGuard()
 @Controller('commissions')
@@ -44,8 +46,9 @@ export class CommissionController {
   @Post()
   async create(
     @Body() createCommissionDto: PostCommissionWithCodeDto,
+    @Req() request: Request,
   ): Promise<ApiResult<Commission>> {
-    const data = await this.commissionService.postCommissionWithCode(createCommissionDto);
+    const data = await this.commissionService.postCommissionWithCode(createCommissionDto, request);
     return okResponse(data, ResponseMessage.CREATED);
   }
 
@@ -56,8 +59,8 @@ export class CommissionController {
   //   return okResponse(data, ResponseMessage.FETCHED);
   // }
 
-  @Get('paginate')
-  @ApiResponse(OpenApiHelper.arrayResponseDoc)
+  @Get()
+  @ApiResponse(OpenApiHelper.paginatedResponseDoc)
   async findAllPaginated(
     @Query() query: CommissionPaginationDto,
   ): Promise<ApiResult<Paginated<Commission>>> {

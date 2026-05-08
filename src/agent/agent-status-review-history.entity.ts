@@ -1,11 +1,10 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { AbstractBaseEntity } from '../common/common.pure.entity';
+import { AbstractBaseReviewHistoryEntity } from '../common/common.entity';
 import { Agent } from './agent.entity';
 import { AgentStatus } from './agent.enums';
-import { User } from '../user/user.entity';
 
 @Entity({ name: 'agent_status_review_history' })
-export class AgentStatusReviewHistory extends AbstractBaseEntity {
+export class AgentStatusReviewHistory extends AbstractBaseReviewHistoryEntity {
     @ManyToOne(() => Agent, (agent) => agent.reviewHistory, {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
@@ -15,16 +14,6 @@ export class AgentStatusReviewHistory extends AbstractBaseEntity {
 
     @Column()
     agentId: number;
-
-    @ManyToOne(() => User, {
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
-    })
-    @JoinColumn({ name: 'reviewer_id' })
-    reviewer: User;
-
-    @Column()
-    reviewerId: number;
 
     @Column({
         type: 'enum',
@@ -38,10 +27,4 @@ export class AgentStatusReviewHistory extends AbstractBaseEntity {
         enum: AgentStatus,
     })
     toStatus: AgentStatus;
-
-    @Column({ nullable: true, type: 'text' })
-    comment: string | null;
-
-    @Column({ type: 'timestamp' })
-    reviewedAt: string;
 }

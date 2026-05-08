@@ -10,6 +10,7 @@ import { AgentPoc } from '../agent-poc/agent-poc.entity';
 import { User } from '../user/user.entity';
 import { AgentStatusReviewHistory } from './agent-status-review-history.entity';
 import { CampaignAgent } from '../campaign/campaign-agent.entity';
+import { BankAccount } from '../bank-account/bank-account.entity';
 
 @Entity({ name: 'agents' })
 export class Agent extends AbstractBaseReviewableEntity {
@@ -63,6 +64,9 @@ export class Agent extends AbstractBaseReviewableEntity {
   @OneToMany(() => CampaignAgent, (assignment) => assignment.agent)
   campaignAssignments: CampaignAgent[];
 
+  @OneToOne(() => BankAccount, (bankAccount) => bankAccount.agent)
+  bankAccount: BankAccount;
+
   @Column()
   title: string;
 
@@ -95,16 +99,6 @@ export class Agent extends AbstractBaseReviewableEntity {
     nullable: true
   })
   companyPhone: string;
-
-  @Column({
-    nullable: true
-  })
-  bankName: string;
-
-  @Column({
-    nullable: true
-  })
-  accountNumber: string;
 
   @Column({
     type: 'enum',

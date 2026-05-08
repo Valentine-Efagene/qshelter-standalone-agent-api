@@ -55,6 +55,8 @@ import { TransactionModule } from './transaction/transaction.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { CampaignModule } from './campaign/campaign.module';
 import { AgentTypeModule } from './agent-type/agent-type.module';
+import { PayoutModule } from './payout/payout.module';
+import { BankAccountModule } from './bank-account/bank-account.module';
 
 @Module({
   imports: [
@@ -76,6 +78,8 @@ import { AgentTypeModule } from './agent-type/agent-type.module';
     PaymentModule,
     TransactionModule,
     AnalyticsModule,
+    PayoutModule,
+    BankAccountModule,
   ],
   controllers: [AppController],
   providers: [AppService],

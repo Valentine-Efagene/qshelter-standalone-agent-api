@@ -17,6 +17,9 @@ import { CampaignAgentTypeRate } from './campaign/campaign-agent-type-rate.entit
 import { Wallet } from './wallet/wallet.entity';
 import { Payment } from './payment/payment.entity';
 import { Transaction } from './transaction/transaction.entity';
+import { Payout } from './payout/payout.entity';
+import { PayoutStatusReviewHistory } from './payout/payout-status-review-history.entity';
+import { BankAccount } from './bank-account/bank-account.entity';
 
 if (process.env.NODE_ENV !== 'test') {
     dotenv.config();
@@ -49,6 +52,9 @@ export const options: DataSourceOptions = {
         Wallet,
         Payment,
         Transaction,
+        Payout,
+        PayoutStatusReviewHistory,
+        BankAccount,
     ],
     dropSchema: false,
     synchronize: false,

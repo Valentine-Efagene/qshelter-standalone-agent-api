@@ -123,3 +123,131 @@ export interface INotificationResponse {
     }
   }
 }
+
+export class AgentAccountApprovedDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty()
+  firstName: string;
+}
+
+export class AgentAccountRejectedDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty()
+  firstName: string;
+
+  @ApiProperty({ example: 'Incomplete verification details' })
+  @IsNotEmpty()
+  rejectionReason: string;
+}
+
+export class AgentAccountSuspensionDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty()
+  firstName: string;
+
+  @ApiProperty({ example: 'Multiple policy violations detected' })
+  @IsNotEmpty()
+  reason: string;
+}
+
+export class AgentBankDetailsUpdateDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane Doe' })
+  @IsNotEmpty()
+  agentName: string;
+}
+
+export class AgentBonusEarnedDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane Doe' })
+  @IsNotEmpty()
+  agentName: string;
+
+  @ApiProperty({ example: 'NGN 20,000.00' })
+  @IsNotEmpty()
+  amount: string;
+}
+
+export class AgentCommissionEarnedDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane Doe' })
+  @IsNotEmpty()
+  agentName: string;
+
+  @ApiProperty({ example: 'NGN 100,000.00' })
+  @IsNotEmpty()
+  amount: string;
+
+  @ApiProperty({ example: 'John Customer' })
+  @IsNotEmpty()
+  customerName: string;
+}
+
+export class AgentCustomerStartedApplicationDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane Doe' })
+  @IsNotEmpty()
+  agentName: string;
+}
+
+export class AgentPasswordChangeConfirmationDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty()
+  firstName: string;
+}
+
+export class AgentPasswordResetRequestDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty()
+  firstName: string;
+
+  @ApiProperty({ example: 'https://example.com/reset-password/token' })
+  @IsNotEmpty()
+  @Transform(({ value }) => encodeURI(value))
+  @IsUrl()
+  resetLink: string;
+}
+
+export class AgentPayoutApprovedDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane Doe' })
+  @IsNotEmpty()
+  agentName: string;
+
+  @ApiProperty({ example: 'NGN 200,000.00' })
+  @IsNotEmpty()
+  amount: string;
+}
+
+export class AgentPayoutRejectedDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane Doe' })
+  @IsNotEmpty()
+  agentName: string;
+
+  @ApiProperty({ example: 'Provided account details could not be verified' })
+  @IsNotEmpty()
+  rejectionReason: string;
+}
+
+export class AgentPayoutRequestReceivedDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane Doe' })
+  @IsNotEmpty()
+  agentName: string;
+}
+
+export class AgentProfileSubmissionDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty()
+  firstName: string;
+}
+
+export class AgentVerifyDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty()
+  firstName: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsNotEmpty()
+  otpCode: string;
+}
+
+export class AgentWelcomeDto extends BaseTemplateEmailDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty()
+  firstName: string;
+}

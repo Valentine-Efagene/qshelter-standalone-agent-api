@@ -7,9 +7,10 @@ import { Referral } from '../referral/referral.entity';
 import { AgentConfigurationModule } from '../agent-configuration/agent-configuration.module';
 import { CaslModule } from '../common/casl/casl.module';
 import { CampaignModule } from '../campaign/campaign.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Commission, Referral]), AgentConfigurationModule, CampaignModule, CaslModule],
+  imports: [TypeOrmModule.forFeature([Commission, Referral]), AgentConfigurationModule, CampaignModule, NotificationModule, CaslModule],
   providers: [CommissionService],
   controllers: [CommissionController],
   exports: [CommissionService]

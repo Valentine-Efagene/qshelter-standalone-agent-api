@@ -1,21 +1,48 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto, PaginatedUsers, UpdateUserDto, UserPaginationDto } from './user.dto';
 import { Paginated, PaginationArgs, buildPaginatedResult } from '../common/common.dto';
 import { ReferreePaginationDto } from '../agent/agent.dto';
+import { Request } from 'express';
+import { NotificationService } from '../notification/notification.service';
+import { App } from '../notification/notification.enums';
+import TypeHelper from '../common/helpers/TypeHelper';
+import { AgentWelcomeDto } from '../notification/notification.dto';
+import { UserRole } from './user.enums';
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
+  private readonly app: App;
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) { }
+    private readonly notificationService: NotificationService,
+  ) {
+    this.app = TypeHelper.toEnum(App, process.env.APP)
+  }
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto, request: Request): Promise<User> {
     const entity = this.userRepository.create(createUserDto);
-    return await this.userRepository.save(entity);
+    const savedUser = await this.userRepository.save(entity);
+
+    if (createUserDto.roles?.includes(UserRole.AGENT) && savedUser.email) {
+      try {
+        const dto: AgentWelcomeDto = {
+          firstName: savedUser.firstName,
+          app: this.app,
+          to_email: savedUser.email,
+        };
+        await this.notificationService.sendAgentWelcome(dto, request);
+      } catch (error) {
+        this.logger.error('Error sending agent welcome notification:', error);
+      }
+    }
+
+    return savedUser;
   }
 
   async findAll(): Promise<User[]> {

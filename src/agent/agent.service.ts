@@ -20,7 +20,13 @@ import {
   AgentType,
 } from './agent.enums';
 import { ErrorMessage } from '../common/common.enum';
-import { AgentApprovedRegistrationDto, AgentOnboardingCompletedDto } from '../notification/notification.dto';
+import {
+  AgentAccountApprovedDto,
+  AgentAccountRejectedDto,
+  AgentApprovedRegistrationDto,
+  AgentOnboardingCompletedDto,
+  AgentProfileSubmissionDto,
+} from '../notification/notification.dto';
 import { App } from '../notification/notification.enums';
 import TypeHelper from '../common/helpers/TypeHelper';
 import { NotificationService } from '../notification/notification.service';
@@ -153,6 +159,13 @@ export class AgentService {
       })
 
       try {
+        const profileSubmissionDto: AgentProfileSubmissionDto = {
+          firstName: user.firstName,
+          app: this.app,
+          to_email: user.email,
+        };
+        await this.notificationService.sendAgentProfileSubmission(profileSubmissionDto, request);
+
         const emailDto: AgentOnboardingCompletedDto = {
           firstName: user.firstName,
           app: this.app,
@@ -336,11 +349,25 @@ export class AgentService {
     try {
       if (updateDto.status === AgentStatus.APPROVED) {
         await this.notificationService.sendAgentApplicationApproved(emailDto, request);
+        const accountApprovedDto: AgentAccountApprovedDto = {
+          firstName: agent.user.firstName,
+          app: this.app,
+          to_email: agent.user.email,
+        };
+        await this.notificationService.sendAgentAccountApproved(accountApprovedDto, request);
       } else if (updateDto.status === AgentStatus.REJECTED) {
         await this.notificationService.sendAgentApplicationDeclined({
           ...emailDto,
           reason: updateDto.comment
         }, request);
+
+        const accountRejectedDto: AgentAccountRejectedDto = {
+          firstName: agent.user.firstName,
+          rejectionReason: updateDto.comment,
+          app: this.app,
+          to_email: agent.user.email,
+        };
+        await this.notificationService.sendAgentAccountRejected(accountRejectedDto, request);
       }
     } catch (error) {
       this.logger.error('Error sending notification email:', error);
@@ -350,7 +377,7 @@ export class AgentService {
   }
 
   async updateOne({ id, ...updateAgentDto }: UpdateAgentDto): Promise<Agent> {
-    const agent = await this.agentRepository.findOneBy({ id });
+    const agent = await this.agentRepository.findOne({ where: { id }, relations: ['user'] });
 
     if (!agent) {
       throw new NotFoundException(`Agent with ID ${id} not found`);

@@ -50,8 +50,8 @@ export class AgentController {
   //   return okResponse(data, ResponseMessage.FETCHED);
   // }
 
-  @Get('paginate')
-  @ApiResponse(OpenApiHelper.arrayResponseDoc)
+  @Get()
+  @ApiResponse(OpenApiHelper.paginatedResponseDoc)
   async findAllPaginated(
     @Query() query: AgentPaginationDto,
   ): Promise<ApiResult<Paginated<Agent>>> {

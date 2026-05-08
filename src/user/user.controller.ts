@@ -7,6 +7,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   Query,
+  Req,
 } from '@nestjs/common';
 import { User } from './user.entity';
 import { UserService } from './user.service';
@@ -17,6 +18,7 @@ import { AuthGuard } from '../common/auth/auth.guard';
 import OpenApiHelper from '../common/OpenApiHelper';
 import { ApiResult, okResponse } from '../common/common.dto';
 import { Paginated } from '../common/common.dto';
+import { Request } from 'express';
 
 @AuthGuard()
 @Controller('users')
@@ -28,8 +30,9 @@ export class UserController {
   @Post()
   async create(
     @Body() createUserDto: CreateUserDto,
+    @Req() request: Request,
   ): Promise<ApiResult<User>> {
-    const data = await this.userService.create(createUserDto);
+    const data = await this.userService.create(createUserDto, request);
     return okResponse(data, ResponseMessage.CREATED);
   }
 
@@ -40,8 +43,8 @@ export class UserController {
   //   return okResponse(data, ResponseMessage.FETCHED);
   // }
 
-  @Get('paginate')
-  @ApiResponse(OpenApiHelper.arrayResponseDoc)
+  @Get()
+  @ApiResponse(OpenApiHelper.paginatedResponseDoc)
   async findAllPaginated(
     @Query() query: UserPaginationDto,
   ): Promise<ApiResult<Paginated<User>>> {

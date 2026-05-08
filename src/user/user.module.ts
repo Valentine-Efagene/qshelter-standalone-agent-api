@@ -4,9 +4,10 @@ import { User } from './user.entity';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { CaslModule } from '../common/casl/casl.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), CaslModule],
+  imports: [TypeOrmModule.forFeature([User]), NotificationModule, CaslModule],
   providers: [UserService],
   controllers: [UserController],
   exports: [UserService]

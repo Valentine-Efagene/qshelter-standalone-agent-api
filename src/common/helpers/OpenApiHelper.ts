@@ -9,10 +9,11 @@ export default class OpenApiHelper {
     schema: {
       type: 'object',
       properties: {
-        statusCode: { type: 'number' },
+        ok: { type: 'boolean', example: true },
         message: { type: 'string' },
-        data: { type: 'object' },
+        data: { type: 'object', nullable: true },
       },
+      required: ['ok', 'message', 'data'],
     },
   };
 
@@ -22,12 +23,12 @@ export default class OpenApiHelper {
     schema: {
       type: 'object',
       properties: {
-        statusCode: { type: 'number' },
+        ok: { type: 'boolean', example: true },
         message: { type: 'string' },
         data: {
           type: 'object',
           properties: {
-            data: { type: 'array', items: { type: 'object' } }, // Adjust the type based on your actual item type
+            items: { type: 'array', items: { type: 'object' } },
             meta: {
               type: 'object',
               properties: {
@@ -35,26 +36,14 @@ export default class OpenApiHelper {
                 totalItems: { type: 'number' },
                 currentPage: { type: 'number' },
                 totalPages: { type: 'number' },
-                sortBy: { type: 'array' },
-                search: { type: 'string' },
-                filter: {
-                  type: 'object',
-                },
               },
-            },
-            link: {
-              type: 'object',
-              properties: {
-                first: { type: 'string' },
-                previous: { type: 'string' },
-                current: { type: 'string' },
-                next: { type: 'string' },
-                last: { type: 'string' },
-              },
+              required: ['itemsPerPage', 'totalItems', 'currentPage', 'totalPages'],
             },
           },
+          required: ['items', 'meta'],
         },
       },
+      required: ['ok', 'message', 'data'],
     },
   };
 
@@ -64,13 +53,14 @@ export default class OpenApiHelper {
     schema: {
       type: 'object',
       properties: {
-        statusCode: { type: 'number' },
+        ok: { type: 'boolean', example: true },
         message: { type: 'string' },
         data: {
           type: 'array',
           items: { type: 'object' },
         },
       },
+      required: ['ok', 'message', 'data'],
     },
   };
 
@@ -82,33 +72,34 @@ export default class OpenApiHelper {
         {
           type: 'object',
           properties: {
-            statusCode: { type: 'number' },
+            ok: { type: 'boolean', example: true },
             message: { type: 'string' },
             data: {
-              type: 'string',
+              type: 'object',
               nullable: true,
               description: 'Nothing is returned',
             },
           },
+          required: ['ok', 'message', 'data'],
         },
       ],
     },
   };
 
   public static errorResponseDoc: ApiResponseOptions = {
-    status: 200,
-    description: 'Successful response',
+    status: 400,
+    description: 'Error response',
     schema: {
       oneOf: [
         {
           type: 'object',
           properties: {
-            statusCode: { type: 'number' },
+            ok: { type: 'boolean', example: false },
             message: { type: 'string' },
-            error: {
-              type: 'object',
-            },
+            data: { type: 'object', nullable: true, example: null },
+            errors: { type: 'array', items: { type: 'string' } },
           },
+          required: ['ok', 'message', 'data'],
         },
       ],
     },

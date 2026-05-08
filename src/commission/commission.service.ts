@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
@@ -8,10 +8,18 @@ import { Commission } from './commission.entity';
 import { Paginated, PaginationDto, buildPaginatedResult } from '../common/common.dto';
 import { Referral } from '../referral/referral.entity';
 import { CampaignService } from '../campaign/campaign.service';
+import { NotificationService } from '../notification/notification.service';
+import { Request } from 'express';
+import { App } from '../notification/notification.enums';
+import TypeHelper from '../common/helpers/TypeHelper';
+import { AgentCommissionEarnedDto } from '../notification/notification.dto';
 
 // https://www.npmjs.com/package/nestjs-paginate
 @Injectable()
 export class CommissionService {
+  private readonly logger = new Logger(CommissionService.name);
+  private readonly app: App;
+
   constructor(
     @InjectRepository(Commission)
     private readonly commissionRepository: Repository<Commission>,
@@ -22,7 +30,10 @@ export class CommissionService {
     private readonly configService: ConfigService,
     private readonly agentConfigurationService: AgentConfigurationService,
     private readonly campaignService: CampaignService,
-  ) { }
+    private readonly notificationService: NotificationService,
+  ) {
+    this.app = TypeHelper.toEnum(App, process.env.APP)
+  }
 
   async create(createCommissionDto: CreateCommissionDto): Promise<Commission> {
     const { referralId, ...rest } = createCommissionDto;
@@ -35,18 +46,23 @@ export class CommissionService {
     return this.commissionRepository.save(entity);
   }
 
-  async postCommissionWithCode(createCommissionDto: PostCommissionWithCodeDto): Promise<Commission> {
+  async postCommissionWithCode(createCommissionDto: PostCommissionWithCodeDto, request: Request): Promise<Commission> {
     const { referralCode, userId, amount } = createCommissionDto;
 
     const referral = await this.referralRepository
       .createQueryBuilder('referral')
       .leftJoin('referral.referrer', 'agent')
+      .leftJoin('agent.user', 'agentUser')
       .leftJoin('referral.referree', 'user')
       .where('agent.referralCode = :referralCode', { referralCode })
       .andWhere('user.id = :userId', { userId })
       .select('referral.id', 'id')
       .addSelect('agent.id', 'agentId')
+      .addSelect('agent.name', 'agentName')
       .addSelect('agent.agentType', 'agentType')
+      .addSelect('agentUser.email', 'agentEmail')
+      .addSelect('user.firstName', 'customerFirstName')
+      .addSelect('user.lastName', 'customerLastName')
       .getRawOne();
 
     if (!referral.id) {
@@ -81,7 +97,32 @@ export class CommissionService {
       amount: amount * commissionRate,
     });
 
-    return this.commissionRepository.save(entity);
+    const savedCommission = await this.commissionRepository.save(entity);
+
+    if (referral.agentEmail) {
+      try {
+        const customerName = [referral.customerFirstName, referral.customerLastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+
+        const dto: AgentCommissionEarnedDto = {
+          agentName: referral.agentName,
+          amount: savedCommission.amount.toLocaleString('en-NG', {
+            style: 'currency',
+            currency: 'NGN',
+          }),
+          customerName,
+          app: this.app,
+          to_email: referral.agentEmail,
+        };
+        await this.notificationService.sendAgentCommissionEarned(dto, request);
+      } catch (error) {
+        this.logger.error('Error sending commission earned notification:', error);
+      }
+    }
+
+    return savedCommission;
   }
 
   async findAll(): Promise<Commission[]> {
